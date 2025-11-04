@@ -1,1 +1,1443 @@
-Test
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DealerLeads Dashboard (beta)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+<style>
+  :root{
+    --bg:#0e1124; --panel:#161a2f; --muted:#8a90b0; --text:#e8ecff;
+    --accent:#6c9dff; --accent2:#22c55e; --border:#262b45; --overlay:#0c0f1d;
+    --ring:#7aa0ff; --chip-bg:#0c0f1d; --chip-border:#2b2f52;
+    --sheet-top: 0px;
+  }
+  [data-theme="light"]{
+    --bg:#ffffff; --panel:#ffffff; --muted:#55607a; --text:#0e1333;
+    --accent:#2a66ff; --accent2:#16a34a; --border:#e2e8f0; --overlay:#f6f8fc;
+    --ring:#90b4ff; --chip-bg:#f1f5ff; --chip-border:#cbd5e1;
+  }
+
+  html,body{height:100%;margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text);}
+  a{color:var(--accent); text-decoration:none;}
+
+  /* Base inputs (used elsewhere, not for login controls) */
+  input[type="text"],input[type="password"],input[type="date"]{
+    background:#0b112c;border:1px solid var(--border);color:#e8ecff;
+    border-radius:12px;padding:12px 14px;font-size:14px;outline:none;
+    transition:border .15s, box-shadow .15s; min-width:0;
+  }
+  [data-theme="light"] input[type="text"],
+  [data-theme="light"] input[type="password"],
+  [data-theme="light"] input[type="date"]{ background:#fff;color:var(--text); }
+  input::placeholder{color:#6c75a4;}
+  input:focus{border-color:var(--ring);box-shadow:0 0 0 3px rgba(122,160,255,.25);}
+  input[type="date"]::-webkit-calendar-picker-indicator{ filter: invert(1); opacity:.9; }
+  [data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator{ filter:none; opacity:.8; }
+
+  /* Buttons */
+  .btn{
+    background:var(--accent); color:#0e1333; border:none; border-radius:12px;
+    padding:10px 14px; font-weight:700; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .btn:hover{ filter:brightness(1.05); }
+  .btn-secondary{ background:#35406e; color:#e6e9ff; }
+  [data-theme="light"] .btn-secondary{ background:#e2e8f0; color:#0e1333; }
+  .btn-ghost{
+    background:transparent; border:1px solid var(--border); color:inherit;
+    border-radius:12px; padding:10px 14px; font-weight:700; cursor:pointer;
+  }
+  .btn-sm{ padding:8px 10px; border-radius:10px; font-size:12px; }
+
+  /* Red pill button (Video Library) */
+  .btn-danger{
+    background:#ef4444; color:#ffffff;
+    border:none; border-radius:999px; /* pill */
+    padding:10px 16px; font-weight:800;
+  }
+  .btn-danger:hover{ filter:brightness(1.05); }
+
+  /* Dropdown */
+  .dropdown{ position:relative; }
+  .dropdown-toggle{ display:inline-flex; align-items:center; gap:8px; }
+  .dropdown-menu{
+    position:absolute; right:0; top:calc(100% + 6px);
+    min-width:200px; background:var(--overlay); color:inherit;
+    border:1px solid var(--border); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.45);
+    padding:6px; display:none; z-index:3000;
+  }
+  [data-theme="light"] .dropdown-menu{ background:#fff; }
+  .dropdown.open .dropdown-menu{ display:block; }
+  .dropdown-item{
+    width:100%; text-align:left; padding:10px 12px; border-radius:10px;
+    background:transparent; border:none; color:inherit; cursor:pointer; font-weight:600;
+    display:flex; align-items:center; gap:10px;
+  }
+  .dropdown-item:hover{ background:#11173a; }
+  [data-theme="light"] .dropdown-item:hover{ background:#f2f6ff; }
+  .dropdown-item svg{ width:16px; height:16px; opacity:.95; flex:0 0 auto; }
+
+  /* Layout */
+  .container{max-width:1320px;margin:0 auto;padding:22px;overflow:visible;}
+  .app-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand img{height:44px;width:auto;display:block;}
+  .title h1{margin:0;font-size:24px;}
+  .title .sub{margin:2px 0 0;color:var(--muted);font-size:12px;}
+  .header-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+  /* Compact dealer */
+  .brand { gap: 16px; flex-wrap: wrap; }
+  .brand-controls{ display:flex; flex-direction:column; gap:4px; min-width:200px; }
+  .brand-dealer-label{ color:var(--muted); font-size:11px; margin-left:2px; }
+  .ms-compact .ms-toggle{ min-height:38px; padding:8px 10px; }
+  .ms-compact{ position:relative; }
+  .ms-compact .ms-panel{ left:auto; right:0; width:320px; max-width:92vw; }
+  .ms-compact .ms-search{ padding:6px 8px; display:flex; justify-content:center; }
+  .ms-compact .ms-search input{ width:100%; max-width:260px; height:36px; font-size:13px; padding:8px 10px; border-radius:10px; }
+  .ms-compact .ms-list{ max-width:260px; margin:0 auto; }
+
+  /* Scrollbars */
+  *{scrollbar-width:thin;scrollbar-color:#3a4580 #0b112c;}
+  *::-webkit-scrollbar{height:10px;width:10px}
+  *::-webkit-scrollbar-track{background:#0b112c;border-radius:12px}
+  *::-webkit-scrollbar-thumb{background:#3a4580;border-radius:12px;border:2px solid #0b112c}
+  [data-theme="light"] *::-webkit-scrollbar-track{background:#eef2ff}
+  [data-theme="light"] *::-webkit-scrollbar-thumb{background:#94a3b8;border-color:#eef2ff}
+
+  /* Theme toggle */
+  .theme-toggle{
+    display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);
+    border-radius:12px;padding:8px 12px;background:transparent;color:inherit;
+    cursor:pointer;font-weight:600;font-size:13px;
+  }
+  .theme-toggle:hover{ background:rgba(127,127,127,.08); }
+  .icon-contrast{ width:18px;height:18px;stroke:currentColor;color:currentColor; }
+
+  /* Collapsible filters */
+  .filters-wrap{position:sticky;top:0;z-index:500;}
+  .filters-toggle{
+    display:flex;align-items:center;gap:8px;justify-content:space-between;
+    background:linear-gradient(0deg, rgba(22,26,47,.98), rgba(22,26,47,.98));backdrop-filter:saturate(120%) blur(8px);
+    border:1px solid var(--border);border-radius:16px;padding:10px 12px;margin:12px 0;
+    box-sizing:border-box;
+  }
+  [data-theme="light"] .filters-toggle{background:#fff;}
+  .filters{
+    background:linear-gradient(0deg, rgba(22,26,47,.98), rgba(22,26,47,.98));backdrop-filter:saturate(120%) blur(8px);
+    border:1px solid var(--border);border-radius:16px;padding:16px;margin:10px 0;display:none; overflow:visible;
+  }
+  [data-theme="light"] .filters{background:#fff;}
+  .filters.open{display:block;}
+  .filter-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .field{display:flex;flex-direction:column;gap:6px;position:relative;}
+  .field > label{color:var(--muted);font-size:12px; pointer-events:none;}
+
+  .filters-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:22px;height:20px;padding:0 8px;border-radius:999px;
+    background:var(--chip-bg);border:1px solid var(--chip-border);
+    color:inherit;font-size:12px;font-weight:700;
+  }
+
+  /* Multiselect */
+  .ms{position:relative; z-index:1;}
+  .ms-toggle{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--chip-bg);color:var(--text);border:1px solid var(--border);
+    border-radius:12px;padding:10px 12px;cursor:pointer;min-height:44px;
+    -webkit-tap-highlight-color: transparent; touch-action:manipulation;
+  }
+  .ms-toggle:focus{outline:none;box-shadow:0 0 0 3px rgba(122,160,255,.25);}
+  .ms-toggle .summary{display:flex;flex-wrap:wrap;gap:6px;min-height:20px;align-items:center;}
+  .ms-chip{background:#121a3f;border:1px solid #2a3567;border-radius:999px;padding:4px 8px;font-size:12px;display:inline-flex;align-items:center;gap:6px;}
+  [data-theme="light"] .ms-chip{background:var(--chip-bg);border-color:var(--chip-border);}
+  .ms-count{font-size:12px;color:var(--muted);margin-left:6px;}
+  .ms-caret{opacity:.8}
+  .ms-panel{
+    position:absolute; z-index:1000; top:calc(100% + 6px);
+    left:0; right:0; background:var(--overlay);
+    border:1px solid var(--border); border-radius:12px;
+    max-height:320px; overflow:auto; box-shadow:0 10px 30px rgba(0,0,0,.45);
+    display:none;
+  }
+  .ms.open .ms-panel{display:block;}
+  .ms-search{position:sticky;top:0;background:var(--overlay);padding:8px;border-bottom:1px solid var(--border);z-index:1;}
+  .ms-search input{width:100%;}
+  .ms-list{padding:8px;}
+  .ms-item{display:flex;gap:8px;align-items:center;padding:8px 6px;cursor:pointer;border-radius:8px;user-select:none;}
+  .ms-item:hover{background:#11173a;}
+  [data-theme="light"] .ms-item:hover{background:#f2f6ff;}
+  .ms-item input{pointer-events:none;}
+  .ms-actions{position:sticky;bottom:0;background:var(--overlay);display:flex;gap:8px;justify-content:flex-end;padding:8px;border-top:1px solid var(--border);}
+  .ms-actions .btn{padding:8px 10px;border-radius:8px;font-size:12px;}
+
+  /* KPIs / Cards / Table */
+  .kpis{position:sticky;top:94px;z-index:400;background:linear-gradient(0deg, rgba(22,26,47,.97), rgba(22,26,47,.97));backdrop-filter:saturate(120%) blur(6px);
+    border:1px solid var(--border);border-radius:16px;padding:12px;margin:12px 0;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+  [data-theme="light"] .kpis{background:#fff;}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;}
+  .kpi-label{color:var(--muted);font-size:12px;margin-bottom:6px;}
+  .kpi-value{font-size:22px;font-weight:700;}
+  .grid-two{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;}
+  .card h3{margin:0 0 10px 0;font-size:16px;}
+  .offers-chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{background:var(--chip-bg);border:1px solid var(--chip-border);border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer;}
+  .chip.active{background:#223166;border-color:#4656a2;color:#fff;}
+  [data-theme="light"] .chip.active{background:#2a66ff;color:#fff;border-color:#2a66ff;}
+  .chip .count{opacity:.8;margin-left:6px;}
+  .offers-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
+
+  .chart-wrap{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:12px;margin-top:12px;}
+  .chart-row{display:grid;grid-template-columns:1fr;gap:12px;}
+  .chart-row-3{display:grid;grid-template-columns:1fr;gap:12px;}
+  .chart-wrap canvas{width:100%;height:170px !important;}
+  .table-wrap{background:var(--panel);border:1px solid var(--border);border-radius:16px;margin:18px 0;position:relative;}
+  .table-actions{padding:12px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .table-actions input[type="text"]{flex:1;min-width:260px;}
+  .table-scroll{display:block;max-height:60vh;overflow:auto;border-bottom-left-radius:16px;border-bottom-right-radius:16px;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{position:sticky;top:0;background:#121533;border-bottom:1px solid var(--border);text-align:left;padding:10px;font-size:12px;color:#b7bce1;z-index:2;}
+  [data-theme="light"] thead th{background:#eef2ff;color:#0e1333;}
+  tbody td{padding:10px;border-bottom:1px solid var(--border);font-size:13px;}
+  tbody tr:hover{background:#12153322;}
+  [data-theme="light"] tbody tr:hover{background:#f1f5ff;}
+  .app-footer{color:var(--muted);font-size:12px;margin-top:12px;text-align:center;}
+
+  /* Quick date alignment */
+  .quick-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+  .quick-row .date-inline{display:flex;align-items:center;gap:6px;}
+  .quick-row .date-inline input[type="date"]{width:135px;min-width:120px;padding:8px 10px;border-radius:10px;font-size:13px;}
+
+  /* Login overlay */
+  .lock-overlay{position:fixed;inset:0;background:rgba(3,6,20,.9);display:flex;align-items:center;justify-content:center;z-index:99999;}
+  [data-theme="light"] .lock-overlay{background:rgba(248,250,252,.95);}
+  .lock-card{width:min(520px,92vw);background:#121533;border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.45);color:#e6e9ff;}
+  [data-theme="light"] .lock-card{background:#ffffff;color:#0e1333;}
+  .lock-card h2{margin:0 0 6px 0;font-size:20px;}
+  .lock-card p{margin:0 0 14px 0;color:var(--muted);font-size:13px;}
+  .login-row{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:8px;}
+  .lock-card .login-row input{ width:100%; }
+
+  /* Unified controls for Username & Password */
+  .lock-row{
+    display:grid;
+    grid-template-columns: 1fr auto;
+    gap:8px;
+    align-items:stretch;
+  }
+  .control{
+    display:flex;
+    align-items:center;
+    height:44px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:var(--panel);
+    overflow:hidden;
+    min-width:0;
+  }
+  .control input{
+    flex:1; min-width:0;
+    height:100%;
+    border:0;
+    background:transparent;
+    color:inherit;
+    padding:0 12px;
+    font-size:14px;
+  }
+  .control .btn-inline{
+    height:100%;
+    border:0;
+    border-left:1px solid var(--border);
+    background:transparent;
+    color:inherit;
+    padding:0 14px;
+    font-weight:700;
+    cursor:pointer;
+    border-radius:0 12px 12px 0;
+    display:inline-flex; align-items:center; justify-content:center;
+    line-height:1;
+  }
+  [data-theme="light"] .control{ background:#fff; }
+  .lock-actions{display:flex;align-items:stretch;}
+  .lock-actions .btn{height:44px;}
+  @media (max-width:640px){ .control{height:40px;} .lock-actions .btn{height:40px;} }
+
+  /* ZIP area + spacing */
+  .zip-controls{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  #zipMapInline{ height:360px; border-radius:12px; overflow:hidden; margin-top:8px; }
+  #zipHeatGrid{ margin-top:8px; }
+  @media (max-width:640px){ #zipMapInline{ height:300px; } }
+
+  /* ZIP boxes */
+  .zip-heat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;}
+  .zip-cell{background:#0c0f1d;border:1px solid var(--border);border-radius:12px;padding:10px;}
+  [data-theme="light"] .zip-cell{background:#f8fafc;}
+  .zip-label{font-size:12px;color:#b7bce1;}
+  [data-theme="light"] .zip-label{color:#334155;}
+  .zip-count{font-weight:700;margin-top:4px;}
+
+  /* Print */
+  @media print{
+    :root{ --bg:#fff; --panel:#fff; --text:#000; --muted:#333; --border:#ddd; }
+    html, body{ background:#fff; color:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .app-header,.filters-wrap,.app-footer,.lock-overlay{ display:none !important; }
+    body[data-print-mode="clean"] .table-wrap{ display:none !important; }
+    body[data-print-mode="clean"] #printTable{ display:none !important; }
+    .chip{ background:#ffffff !important; border:1px solid #bbb !important; color:#000 !important; }
+    .card, .chart-wrap, .kpis{ border:1px solid #ccc !important; }
+    a[href]:after{ content:""; }
+  }
+
+  .print-summary{ display:none; }
+  #printTable{ display:none; }
+
+  /* Multiselect stacking fix */
+  .ms{ position: relative; z-index: auto !important; }
+  .ms .ms-panel{ z-index: 2000 !important; }
+  @media (max-width: 640px){ .ms .ms-panel{ z-index: 10050 !important; } }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="lock" class="lock-overlay" style="display:flex;">
+  <div class="lock-card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img id="lockLogo" src="https://theleadlasso.com/agency/gvleads/GVLeads_White.png" alt="Logo" style="height:36px;width:auto;">
+        <h2 style="margin:0;">Enter Dashboard Access (beta) </h2>
+      </div>
+      <button id="lockTheme" class="theme-toggle" type="button" title="Toggle Light/Dark Theme">
+        <svg class="icon-contrast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 3a9 9 0 0 1 0 18V3z" fill="currentColor" stroke="none"></path>
+        </svg>
+        <span class="label">Light Mode</span>
+      </button>
+    </div>
+    <p>This dashboard contains customer data. Please log in.</p>
+
+    <div class="login-row">
+      <div class="control">
+        <input id="user" type="text" placeholder="Username" autocomplete="username" />
+      </div>
+
+      <div class="lock-row">
+        <div class="control">
+          <input id="pw" type="password" placeholder="Password" autocomplete="current-password" />
+          <button id="togglePw" class="btn-inline" type="button">Show</button>
+        </div>
+        <div class="lock-actions">
+          <button id="pwBtn" class="btn">Unlock</button>
+        </div>
+      </div>
+    </div>
+    <div id="pwErr" class="err"></div>
+  </div>
+</div>
+
+<div class="container" id="app" style="display:none;">
+  <header class="app-header">
+    <div class="brand">
+      <img id="brandLogo" src="https://theleadlasso.com/agency/gvleads/GVLeads_White.png" alt="Logo">
+      <div class="title">
+        <h1>DealerLeads Dashboard</h1>
+        <p class="sub">(Beta) Drive your leads. Fuel your sales.</p>
+      </div>
+    </div>
+    <div class="brand-controls">
+      <div id="msDealer" class="ms ms-compact"></div>
+    </div>
+    <div class="header-actions">
+      <button id="refreshBtn" class="btn">Refresh</button>
+      <button id="resetBtn" class="btn btn-secondary">Reset all filters</button>
+
+      <!-- Export dropdown (with icons) -->
+      <div class="dropdown" id="exportDropdown">
+        <button class="btn dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
+          Export ▾
+        </button>
+        <div class="dropdown-menu" role="menu" aria-label="Export options">
+          <button class="dropdown-item" id="exportCsvAction" role="menuitem">
+            <!-- CSV icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <path d="M14 2v6h6"/>
+              <path d="M8 13h8M8 17h8M8 9h3"/>
+            </svg>
+            Export CSV
+          </button>
+          <button class="dropdown-item" id="exportPdfAction" role="menuitem">
+            <!-- PDF icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <path d="M14 2v6h6"/>
+              <path d="M9 13h3v6M9 16h2M15 13h2a2 2 0 0 1 0 4h-2v-4z"/>
+            </svg>
+            Export PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Video Library: same shape, red pill -->
+      <a class="btn-danger" href="https://dealerleads-video.vercel.app/" target="_blank" rel="noopener">Video Library</a>
+
+      <button id="themeToggle" class="theme-toggle" type="button" title="Toggle Light/Dark Theme">
+        <svg class="icon-contrast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 3a9 9 0 0 1 0 18V3z" fill="currentColor" stroke="none"></path>
+        </svg>
+        <span class="label">Light Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Collapsible Filters -->
+  <div class="filters-wrap">
+    <div class="filters-toggle">
+      <strong style="display:flex;align-items:center;gap:8px;">
+        Filters
+        <span id="filtersCount" class="filters-badge">0</span>
+      </strong>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="quick-row" id="quickRowTop" style="margin:0;">
+          <button id="btnLastMonth" class="btn-ghost btn-sm">Last Month</button>
+          <button id="btnMTD" class="btn-ghost btn-sm">Month To Date</button>
+          <div class="date-inline">
+            <input type="date" id="fDateFromTop" />
+            <input type="date" id="fDateToTop" />
+          </div>
+        </div>
+        <button id="filtersToggleBtn" class="btn-ghost btn-sm" type="button">Show</button>
+      </div>
+    </div>
+    <section class="filters" id="filters">
+      <div class="quick-row">
+        <button id="btnLastMonth2" class="btn-ghost btn-sm">Last Month</button>
+        <button id="btnMTD2" class="btn-ghost btn-sm">Month To Date</button>
+        <div class="date-inline">
+          <input type="date" id="fDateFrom" />
+          <input type="date" id="fDateTo" />
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <div class="field"><label>Product Type</label><div id="msProd" class="ms"></div></div>
+        <div class="field"><label>New/Used</label><div id="msNewUsed" class="ms"></div></div>
+        <div class="field"><label>CTA Type</label><div id="msCta" class="ms"></div></div>
+        <div class="field"><label>Device</label><div id="msDevice" class="ms"></div></div>
+        <div class="field"><label>Offer</label><div id="msOffer" class="ms"></div></div>
+        <div class="field"><label>Vehicle Year</label><div id="msYear" class="ms"></div></div>
+        <div class="field"><label>Vehicle Make</label><div id="msMake" class="ms"></div></div>
+        <div class="field"><label>Vehicle Model</label><div id="msModel" class="ms"></div></div>
+        <div class="field"><label>Lead Source</label><div id="msSource" class="ms"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="kpis">
+    <div class="kpi"><div class="kpi-label">Total Leads</div><div id="kpiTotal" class="kpi-value">0</div></div>
+    <div class="kpi"><div class="kpi-label">Unique Leads (by Email)</div><div id="kpiUniqueEmails" class="kpi-value">0</div></div>
+    <div class="kpi"><div class="kpi-label">Unique Dealerships</div><div id="kpiStores" class="kpi-value">0</div></div>
+    <div class="kpi"><div class="kpi-label">Sales / Service</div><div id="kpiSalesService" class="kpi-value">0 / 0</div></div>
+    <div class="kpi"><div class="kpi-label">Desktop / Mobile</div><div id="kpiDevice" class="kpi-value">0 / 0</div></div>
+  </section>
+
+  <div class="grid-two">
+    <div class="card">
+      <h3>Offers (scoped to selected dealership)</h3>
+      <div id="offersChips" class="offers-chips"></div>
+      <div class="offers-actions">
+        <button id="offersToggle" class="btn-ghost">Show more</button>
+        <button id="offersClear" class="btn-ghost">Clear</button>
+      </div>
+    </div>
+
+    <!-- ZIP Map / Boxes switch -->
+    <div class="card">
+      <h3>ZIP Heat <span id="zipViewLabel">Map</span></h3>
+      <div class="zip-controls">
+        <button id="zipViewMap" class="btn-ghost btn-sm">Map</button>
+        <button id="zipViewBoxes" class="btn-ghost btn-sm">Boxes</button>
+        <button id="zipToggle" class="btn-ghost btn-sm" style="display:none;">Show more</button>
+        <button id="zipClearCache" class="btn-ghost btn-sm" title="Forget saved ZIP geocodes">Clear ZIP cache</button>
+      </div>
+      <div id="zipMapInline"></div>
+      <div id="zipHeatGrid" class="zip-heat-grid" style="display:none;"></div>
+    </div>
+  </div>
+
+  <section class="chart-wrap">
+    <h3>Leads by Weekday</h3>
+    <div class="chart-row">
+      <canvas id="chartByDay"></canvas>
+    </div>
+  </section>
+
+  <section class="chart-wrap">
+    <h3>Vehicle Insights — Top Models (Top 10)</h3>
+    <div class="chart-row-3">
+      <canvas id="chartTopModels"></canvas>
+    </div>
+  </section>
+
+  <!-- Print-only containers -->
+  <section id="printSummary" class="print-summary" aria-hidden="true"></section>
+  <section id="printTable" class="print-summary" aria-hidden="true"></section>
+
+  <section class="table-wrap">
+    <div class="table-actions">
+      <input type="text" id="search" placeholder="Search name, email, VIN, model, zip, referral…" />
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="fDedupe" /> Deduplicate by email
+      </label>
+    </div>
+    <div class="table-scroll">
+      <table id="dataTable"><thead></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <footer class="app-footer">
+    <span>Made with ❤️ from Texas  • Last refresh <span id="lastRefresh">—</span></span>
+  </footer>
+</div>
+
+<script>
+/* ============================== CONFIG ============================== */
+const CONFIG = {
+  CSV_URL: "/api/leads",
+  USERNAME: "admin",
+  PASSWORD: "GV2025",
+  ZIP_COORDS: { /* optional zip-> [lat,lng] */ },
+  ZIP_COORDS_URL: ""
+};
+
+/* ============================== THEME ============================== */
+function getTheme(){ return localStorage.getItem('gv_theme') || 'dark'; }
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('gv_theme', t);
+  const darkLogo = "https://theleadlasso.com/assets/whitedealerleads.png";
+  const lightLogo = "https://theleadlasso.com/assets/DealerLeadsColor.png";
+  document.getElementById('brandLogo').src = (t==='light') ? lightLogo : darkLogo;
+  document.getElementById('lockLogo').src = (t==='light') ? lightLogo : darkLogo;
+  renderThemeButtons();
+}
+function renderThemeButtons(){
+  const t = getTheme();
+  const label = (t === 'light') ? 'Dark Mode' : 'Light Mode';
+  document.querySelectorAll('.theme-toggle .label').forEach(lb => lb.textContent = label);
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  setTheme(getTheme());
+  document.getElementById('themeToggle')?.addEventListener('click', ()=>setTheme(getTheme()==='dark'?'light':'dark'));
+  document.getElementById('lockTheme')?.addEventListener('click', ()=>setTheme(getTheme()==='dark'?'light':'dark'));
+});
+
+/* ============================== LOGIN ============================== */
+const lockEl = document.getElementById('lock');
+const appEl = document.getElementById('app');
+const userEl = document.getElementById('user');
+const pwEl = document.getElementById('pw');
+const pwBtn = document.getElementById('pwBtn');
+const pwErr = document.getElementById('pwErr');
+const togglePwBtn = document.getElementById('togglePw');
+
+function tryUnlock(){
+  const u=(userEl.value||'').trim();
+  const v=(pwEl.value||'').trim();
+  if (u===CONFIG.USERNAME && v===CONFIG.PASSWORD){
+    sessionStorage.setItem('gv_dash_ok','1');
+    sessionStorage.setItem('gv_user', u);
+    lockEl.style.display='none';
+    appEl.style.display='block';
+    initApp();
+  } else {
+    pwErr.textContent='Incorrect username or password.';
+  }
+}
+pwBtn.addEventListener('click', tryUnlock);
+pwEl.addEventListener('keydown', e=>{ if (e.key==='Enter') tryUnlock(); });
+userEl.addEventListener('keydown', e=>{ if (e.key==='Enter') tryUnlock(); });
+togglePwBtn.addEventListener('click', ()=>{
+  const show = pwEl.type === 'password';
+  pwEl.type = show ? 'text' : 'password';
+  togglePwBtn.textContent = show ? 'Hide' : 'Show';
+});
+document.addEventListener('DOMContentLoaded', function(){
+  if (sessionStorage.getItem('gv_dash_ok')==='1'){
+    lockEl.style.display='none'; appEl.style.display='block'; initApp();
+  }
+});
+
+/* ============================== STATE & UI ============================== */
+const UI = {
+  btnRefresh:null, btnReset:null,
+  btnLastMonth:null, btnMTD:null, btnLastMonth2:null, btnMTD2:null,
+  filtersPanel:null, filtersToggleBtn:null,
+  fDateFromTop:null, fDateToTop:null, fDateFrom:null, fDateTo:null,
+  search:null, lastRefresh:null,
+  kpiTotal:null, kpiUniqueEmails:null, kpiStores:null, kpiSalesService:null, kpiDevice:null,
+  tableHead:null, tableBody:null, offersChips:null,
+  dedupe:null, offersToggle:null, offersClear:null,
+  charts:{ byDay:null, topModels:null },
+  ms:{ dealer:null, prod:null, newUsed:null, cta:null, device:null, offer:null, year:null, make:null, model:null, source:null },
+  /* ZIP UI */
+  zipMap:null, zipHeatGrid:null, zipToggle:null, zipViewMapBtn:null, zipViewBoxesBtn:null, zipViewLabel:null, zipClearCacheBtn:null,
+  /* Export dropdown */
+  exportDropdown:null, exportCsvAction:null, exportPdfAction:null
+};
+const STATE = {
+  all:[], filtered:[], searchText:'', zipCoords:{},
+  selections:{ dealer:[], prod:[], newUsed:[], cta:[], device:[], offer:[], year:[], make:[], model:[], source:[] },
+  offersExpanded:false,
+  zipsExpanded:false,
+  zipView:'map'
+};
+
+/* ============================== ICONS ============================== */
+function deviceIcon(type, size){
+  size = size || 16;
+  var t=(type||'').toLowerCase();
+  function svg(p){ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="opacity:.95"><path d="'+p+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
+  if (t==='mobile') return '<span class="icon">'+svg('M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z M12 18h.01')+'</span>';
+  if (t==='tablet') return '<span class="icon">'+svg('M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M12 18h.01')+'</span>';
+  return '<span class="icon">'+svg('M4 5h16v10H4z M8 21h8 M12 15v6')+'</span>';
+}
+
+/* ============================== INIT ============================== */
+function initApp(){
+  UI.btnRefresh = document.getElementById('refreshBtn');
+  UI.btnReset = document.getElementById('resetBtn');
+
+  UI.filtersPanel = document.getElementById('filters');
+  UI.filtersToggleBtn = document.getElementById('filtersToggleBtn');
+
+  UI.fDateFromTop = document.getElementById('fDateFromTop');
+  UI.fDateToTop = document.getElementById('fDateToTop');
+  UI.fDateFrom = document.getElementById('fDateFrom');
+  UI.fDateTo = document.getElementById('fDateTo');
+
+  UI.search = document.getElementById('search');
+  UI.lastRefresh = document.getElementById('lastRefresh');
+  UI.kpiTotal = document.getElementById('kpiTotal');
+  UI.kpiUniqueEmails = document.getElementById('kpiUniqueEmails');
+  UI.kpiStores = document.getElementById('kpiStores');
+  UI.kpiSalesService = document.getElementById('kpiSalesService');
+  UI.kpiDevice = document.getElementById('kpiDevice');
+  UI.tableHead = document.querySelector('#dataTable thead');
+  UI.tableBody = document.querySelector('#dataTable tbody');
+  UI.offersChips = document.getElementById('offersChips');
+  UI.dedupe = document.getElementById('fDedupe');
+  UI.offersToggle = document.getElementById('offersToggle');
+  UI.offersClear = document.getElementById('offersClear');
+
+  // ZIP UI
+  UI.zipHeatGrid = document.getElementById('zipHeatGrid');
+  UI.zipToggle = document.getElementById('zipToggle');
+  UI.zipViewMapBtn = document.getElementById('zipViewMap');
+  UI.zipViewBoxesBtn = document.getElementById('zipViewBoxes');
+  UI.zipViewLabel = document.getElementById('zipViewLabel');
+  UI.zipClearCacheBtn = document.getElementById('zipClearCache');
+
+  // Export dropdown
+  UI.exportDropdown = document.getElementById('exportDropdown');
+  UI.exportCsvAction = document.getElementById('exportCsvAction');
+  UI.exportPdfAction = document.getElementById('exportPdfAction');
+
+  // Multiselects
+  UI.ms.dealer = buildMultiSelect(
+    document.getElementById('msDealer'),
+    'All dealerships',
+    vals=>{ STATE.selections.dealer=vals; refreshOptionsScoped(); applyFilters(); updateFiltersCount(); }
+  );
+  UI.ms.prod   = buildMultiSelect(document.getElementById('msProd'),'All products', vals=>{ STATE.selections.prod=vals; applyFilters(); updateFiltersCount(); });
+  UI.ms.newUsed = buildMultiSelect(document.getElementById('msNewUsed'),'All', vals=>{ STATE.selections.newUsed=vals; applyFilters(); updateFiltersCount(); });
+  UI.ms.cta = buildMultiSelect(document.getElementById('msCta'),'All', vals=>{ STATE.selections.cta=vals; applyFilters(); updateFiltersCount(); });
+  UI.ms.device = buildMultiSelect(document.getElementById('msDevice'),'Any', vals=>{ STATE.selections.device=vals.map(v=>v.toLowerCase()); applyFilters(); updateFiltersCount(); }, (label)=>deviceIcon(label,14)+' '+escapeHtml(label), (chip)=>deviceIcon(chip,14)+' '+escapeHtml(chip));
+  UI.ms.offer = buildMultiSelect(document.getElementById('msOffer'),'All', vals=>{ STATE.selections.offer=vals; applyFilters(); updateFiltersCount(); });
+  UI.ms.year = buildMultiSelect(document.getElementById('msYear'),'All years', vals=>{ STATE.selections.year=vals; applyFilters(); updateFiltersCount(); });
+  UI.ms.make = buildMultiSelect(document.getElementById('msMake'),'All makes', vals=>{ STATE.selections.make=vals; applyFilters(); updateFiltersCount(); });
+  UI.ms.model = buildMultiSelect(document.getElementById('msModel'),'All models', vals=>{ STATE.selections.model=vals; applyFilters(); updateFiltersCount(); });
+  UI.ms.source = buildMultiSelect(document.getElementById('msSource'),'All sources', vals=>{ STATE.selections.source=vals; applyFilters(); updateFiltersCount(); });
+
+  // Core events
+  document.getElementById('refreshBtn').addEventListener('click', loadData);
+  document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+  // Export dropdown behavior
+  UI.exportDropdown.querySelector('.dropdown-toggle').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    UI.exportDropdown.classList.toggle('open');
+    UI.exportDropdown.querySelector('.dropdown-toggle').setAttribute(
+      'aria-expanded', UI.exportDropdown.classList.contains('open') ? 'true' : 'false'
+    );
+  });
+  UI.exportCsvAction.addEventListener('click', ()=>{ exportCsv(); UI.exportDropdown.classList.remove('open'); });
+  UI.exportPdfAction.addEventListener('click', ()=>{ exportPdf(); UI.exportDropdown.classList.remove('open'); });
+  document.addEventListener('click', (e)=>{ if (!UI.exportDropdown.contains(e.target)) UI.exportDropdown.classList.remove('open'); });
+
+  // Date + search
+  UI.search.addEventListener('input', ()=>{ STATE.searchText=(UI.search.value||'').toLowerCase(); applyFilters(); });
+  document.getElementById('fDateFrom').addEventListener('change', ()=>{ syncDatesAndFilter(); updateFiltersCount(); });
+  document.getElementById('fDateTo').addEventListener('change', ()=>{ syncDatesAndFilter(); updateFiltersCount(); });
+  document.getElementById('fDateFromTop').addEventListener('change', ()=>{ UI.fDateFrom.value = UI.fDateFromTop.value; applyFilters(); updateFiltersCount(); });
+  document.getElementById('fDateToTop').addEventListener('change', ()=>{ UI.fDateTo.value = UI.fDateToTop.value; applyFilters(); updateFiltersCount(); });
+  UI.dedupe.addEventListener('change', ()=>{ applyFilters(); updateFiltersCount(); });
+
+  // Quick date buttons
+  document.getElementById('btnLastMonth').addEventListener('click', ()=>{ setRangeLastMonth(); updateFiltersCount(); });
+  document.getElementById('btnMTD').addEventListener('click', ()=>{ setRangeMTD(); updateFiltersCount(); });
+  document.getElementById('btnLastMonth2').addEventListener('click', ()=>{ setRangeLastMonth(); updateFiltersCount(); });
+  document.getElementById('btnMTD2').addEventListener('click', ()=>{ setRangeMTD(); updateFiltersCount(); });
+
+  // Collapsible filters persist
+  const savedOpen = localStorage.getItem('gv_filters_open') === '1';
+  if (savedOpen){ UI.filtersPanel.classList.add('open'); UI.filtersToggleBtn.textContent='Hide'; }
+  UI.filtersToggleBtn.addEventListener('click', ()=>{
+    UI.filtersPanel.classList.toggle('open');
+    const open = UI.filtersPanel.classList.contains('open');
+    UI.filtersToggleBtn.textContent = open ? 'Hide' : 'Show';
+    localStorage.setItem('gv_filters_open', open?'1':'0');
+  });
+
+  // Close multiselects on outside click
+  document.addEventListener('pointerdown', (e)=>{
+    const openAny = document.querySelector('.ms.open');
+    if (openAny && !openAny.contains(e.target)) {
+      document.querySelectorAll('.ms.open').forEach(ms=>ms.classList.remove('open'));
+      if (window.matchMedia('(max-width: 640px)').matches){
+        document.body.classList.remove('no-scroll');
+      }
+    }
+  }, {capture:true});
+
+  // ZIP view switch
+  UI.zipViewMapBtn.addEventListener('click', ()=>{
+    STATE.zipView = 'map';
+    updateZipView(STATE.filtered);
+  });
+  UI.zipViewBoxesBtn.addEventListener('click', ()=>{
+    STATE.zipView = 'boxes';
+    updateZipView(STATE.filtered);
+  });
+  UI.zipToggle.addEventListener('click', ()=>{
+    STATE.zipsExpanded = !STATE.zipsExpanded;
+    UI.zipToggle.textContent = STATE.zipsExpanded ? 'Show less' : 'Show more';
+    renderZipHeatGrid(STATE.filtered);
+  });
+  UI.zipClearCacheBtn.addEventListener('click', ()=>{
+    localStorage.removeItem(ZIP_CACHE_KEY);
+    STATE.zipCoords = { ...CONFIG.ZIP_COORDS };
+    updateZipView(STATE.filtered);
+    alert('ZIP cache cleared. Rebuilding map…');
+  });
+
+  // ZIP coords
+  STATE.zipCoords = {...CONFIG.ZIP_COORDS};
+  if (CONFIG.ZIP_COORDS_URL){
+    fetch(CONFIG.ZIP_COORDS_URL).then(r=>r.ok?r.json():null).then(j=>{ if (j) STATE.zipCoords = {...STATE.zipCoords, ...j}; });
+  }
+
+  loadData();
+}
+
+/* ============================== QUICK DATES ============================== */
+function toISODate(d){ const pad=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function setRangeLastMonth(){
+  const today=new Date();
+  const firstThis = new Date(today.getFullYear(), today.getMonth(), 1);
+  const firstLast = new Date(firstThis); firstLast.setMonth(firstThis.getMonth()-1);
+  const lastLast = new Date(firstThis); lastLast.setDate(0);
+  const from = toISODate(firstLast), to = toISODate(lastLast);
+  document.getElementById('fDateFrom').value = from; document.getElementById('fDateTo').value = to;
+  document.getElementById('fDateFromTop').value=from; document.getElementById('fDateToTop').value=to;
+  applyFilters();
+}
+function setRangeMTD(){
+  const today=new Date();
+  const firstThis = new Date(today.getFullYear(), today.getMonth(), 1);
+  const from = toISODate(firstThis), to = toISODate(today);
+  document.getElementById('fDateFrom').value = from; document.getElementById('fDateTo').value = to;
+  document.getElementById('fDateFromTop').value=from; document.getElementById('fDateToTop').value=to;
+  applyFilters();
+}
+function syncDatesAndFilter(){
+  document.getElementById('fDateFromTop').value = document.getElementById('fDateFrom').value;
+  document.getElementById('fDateToTop').value = document.getElementById('fDateTo').value;
+  applyFilters();
+}
+
+/* ============================== RESET ============================== */
+function resetAll(){
+  for (const k of Object.keys(STATE.selections)){ STATE.selections[k]=[]; }
+  UI.ms.dealer.setSelected([]); UI.ms.prod.setSelected([]); UI.ms.newUsed.setSelected([]); UI.ms.cta.setSelected([]);
+  UI.ms.device.setSelected([]); UI.ms.offer.setSelected([]); UI.ms.year.setSelected([]);
+  UI.ms.make.setSelected([]); UI.ms.model.setSelected([]); UI.ms.source.setSelected([]);
+  document.getElementById('fDateFrom').value=''; document.getElementById('fDateTo').value='';
+  document.getElementById('fDateFromTop').value=''; document.getElementById('fDateToTop').value='';
+  UI.search.value=''; STATE.searchText=''; UI.dedupe.checked=false;
+  refreshOptionsScoped();
+  renderOffers(scopedRowsByDealer());
+  STATE.zipsExpanded=false; STATE.zipView='map';
+  applyFilters();
+  updateFiltersCount();
+}
+
+/* ============================== MULTISELECT ============================== */
+function buildMultiSelect(root, placeholder, onChange, renderItemLabel, renderChipLabel){
+  root.classList.add('ms');
+  root.innerHTML = `
+    <div class="ms-toggle" tabindex="0">
+      <div class="summary"><span class="ms-placeholder">${placeholder}</span></div>
+      <div class="ms-caret">▾</div>
+    </div>
+    <div class="ms-panel">
+      <div class="ms-search"><input type="text" placeholder="Search..." /></div>
+      <div class="ms-list"></div>
+      <div class="ms-actions">
+        <button type="button" class="btn btn-secondary ms-none">Select None</button>
+        <button type="button" class="btn btn-secondary ms-all">Select All</button>
+        <button type="button" class="btn ms-apply">Apply</button>
+      </div>
+    </div>`;
+  const toggle=root.querySelector('.ms-toggle');
+  const list=root.querySelector('.ms-list');
+  const search=root.querySelector('.ms-search input');
+  const btnAll=root.querySelector('.ms-all');
+  const btnNone=root.querySelector('.ms-none');
+  const applyBtn=root.querySelector('.ms-apply');
+  const summary=root.querySelector('.summary');
+
+  let options=[], filtered=[];
+
+  function renderList(){
+    const q=(search.value||'').toLowerCase();
+    filtered=options.filter(o=>!q||o.label.toLowerCase().includes(q));
+    list.innerHTML = filtered.map((o,i)=>{
+      const labelHtml = renderItemLabel ? renderItemLabel(o.label) : escapeHtml(o.label);
+      return `<div class="ms-item" data-i="${i}">
+        <input type="checkbox" ${o.checked?'checked':''} />
+        <span>${labelHtml}</span>
+      </div>`;
+    }).join('');
+  }
+  function updateSummary(){
+    const sel=options.filter(o=>o.checked).map(o=>o.label);
+    if (!sel.length){ summary.innerHTML=`<span class="ms-placeholder">${placeholder}</span>`; return; }
+    const chips=sel.slice(0,2).map(s=>{
+      const label = renderChipLabel ? renderChipLabel(s) : escapeHtml(s);
+      return `<span class="ms-chip">${label}</span>`;
+    }).join('');
+    const remaining = Math.max(sel.length-2, 0);
+    const countBadge = `<span class="ms-count">${sel.length} selected</span>`;
+    summary.innerHTML = chips + (remaining>0?` <span class="ms-chip">+${remaining}</span>`:'') + countBadge;
+  }
+  function setOptions(values){
+    options=values.map(v=>({value:v,label:v,checked:false}));
+    search.value=''; renderList(); updateSummary();
+  }
+  function setSelected(values){
+    const set=new Set(values);
+    options.forEach(o=>o.checked=set.has(o.value));
+    renderList(); updateSummary();
+  }
+  function getSelected(){ return options.filter(o=>o.checked).map(o=>o.value); }
+
+  function closeAll(){
+    document.querySelectorAll('.ms.open').forEach(ms=>ms.classList.remove('open'));
+    if (window.matchMedia('(max-width: 640px)').matches){
+      document.body.classList.remove('no-scroll');
+    }
+  }
+
+  const openClose = ()=>{
+    const willOpen = !root.classList.contains('open');
+    closeAll();
+    root.classList.toggle('open', willOpen);
+
+    const isMobile = window.matchMedia('(max-width: 640px)').matches;
+    if (isMobile){
+      const sticky = document.querySelector('.filters-toggle');
+      const topPx = sticky ? Math.ceil(sticky.getBoundingClientRect().bottom) : 0;
+      document.documentElement.style.setProperty('--sheet-top', topPx + 'px');
+      document.body.classList.toggle('no-scroll', willOpen);
+    }
+  };
+
+  toggle.addEventListener('click', (e)=>{ e.stopPropagation(); openClose(); });
+  toggle.addEventListener('touchend', (e)=>{ e.preventDefault(); e.stopPropagation(); openClose(); }, {passive:false});
+  toggle.addEventListener('keydown', (e)=>{ if (e.key==='Enter' || e.key===' ') { e.preventDefault(); openClose(); } });
+
+  list.addEventListener('click', (e)=>{
+    const item=e.target.closest('.ms-item'); if(!item) return;
+    const idx=parseInt(item.getAttribute('data-i'),10);
+    const opt=filtered[idx]; if (!opt) return;
+    const real=options.find(o=>o.value===opt.value);
+    real.checked=!real.checked;
+    renderList(); updateSummary();
+  });
+  search.addEventListener('input', renderList);
+
+  search.addEventListener('focus', ()=>{
+    if (window.matchMedia('(max-width: 640px)').matches){
+      setTimeout(()=>{ search.scrollIntoView({block:'center'}); }, 50);
+    }
+  });
+
+  btnAll.addEventListener('click', ()=>{ options.forEach(o=>o.checked=true); renderList(); updateSummary(); onChange(getSelected()); });
+  btnNone.addEventListener('click', ()=>{ options.forEach(o=>o.checked=false); renderList(); updateSummary(); onChange(getSelected()); });
+  applyBtn.addEventListener('click', ()=>{ closeAll(); onChange(getSelected()); });
+
+  return { setOptions, setSelected, getSelected, updateSummary };
+}
+
+/* ============================== DATA LOADING ============================== */
+async function loadData(){
+  document.getElementById('refreshBtn').disabled=true;
+  try{
+    const res=await fetch(CONFIG.CSV_URL,{cache:'no-store'});
+    if(!res.ok) throw new Error('CSV fetch error: '+res.status);
+    const csv=await res.text();
+    const matrix=parseCsv(csv); const headers=matrix[0]; const rows=matrix.slice(1);
+    const objs=rowsToObjects(headers,rows);
+    STATE.all=objs; STATE.filtered=objs.slice();
+    document.getElementById('lastRefresh').textContent=new Date().toLocaleString();
+
+    const dealers=unique(STATE.all.map(r=>r.dealerName)).sort();
+    UI.ms.dealer.setOptions(dealers);
+    UI.ms.dealer.setSelected(dealers);
+    STATE.selections.dealer = dealers.slice();
+
+    const prods=unique(STATE.all.map(r=>r.productType)).sort();
+    UI.ms.prod.setOptions(prods);
+
+    refreshOptionsScoped();
+    applyFilters();
+
+    UI.ms.newUsed.setOptions(unique(STATE.all.map(r=>r.newUsed)).sort());
+    UI.ms.cta.setOptions(unique(STATE.all.map(r=>r.ctaType)).sort());
+    UI.ms.device.setOptions(unique(STATE.all.map(r=>(r.device||'').toLowerCase())).sort());
+    UI.ms.offer.setOptions(unique(STATE.all.map(r=>r.offer)).sort());
+    UI.ms.year.setOptions(unique(STATE.all.map(r=>r.vehicleYear)).sort((a,b)=>String(a).localeCompare(String(b))));
+    UI.ms.make.setOptions(unique(STATE.all.map(r=>r.vehicleMake)).sort());
+    UI.ms.model.setOptions(unique(STATE.all.map(r=>r.vehicleModel)).sort());
+    UI.ms.source.setOptions(unique(STATE.all.map(r=>r.referral)).sort());
+
+    renderOffers(scopedRowsByDealer());
+    renderEverything(STATE.filtered);
+    updateFiltersCount();
+  }catch(e){ alert('Error loading data: '+(e&&e.message?e.message:e)); console.error(e); }
+  finally{ document.getElementById('refreshBtn').disabled=false; }
+}
+
+/* ============================== CSV + MAPPERS ============================== */
+function parseCsv(csv){
+  var rows=[]; var row=[]; var cell=''; var inQuotes=false;
+  for (var i=0;i<csv.length;i++){
+    var ch=csv[i];
+    if (inQuotes){
+      if (ch === '"'){ if (csv[i+1] === '"'){ cell+='"'; i++; } else { inQuotes=false; } }
+      else { cell+=ch; }
+    } else {
+      if (ch === '"') inQuotes=true;
+      else if (ch===','){ row.push(cell); cell=''; }
+      else if (ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+      else if (ch!=='\r'){ cell+=ch; }
+    }
+  }
+  if (cell.length || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+function findHeader(headers,candidates,fallbackIndex){
+  function norm(s){ return String(s||'').replace(/\s+/g,' ').trim().toLowerCase(); }
+  var H=headers.map(function(h){return norm(h);});
+  for(var ci=0;ci<candidates.length;ci++){ var c=candidates[ci]; var idx=H.indexOf(norm(c)); if(idx!==-1) return idx; }
+  return (fallbackIndex!=null?fallbackIndex:-1);
+}
+function rowsToObjects(headersRaw, rows){
+  var headers=headersRaw.map(function(h){return String(h||'').replace(/\s+/g,' ').trim();});
+  var H={
+    dealershipUrl:findHeader(headers,['Dealership URL','URL','Domain']),
+    dealerName:findHeader(headers,['Dealer Name','Dealer','Dealership','DealerName','Store Name'],22),
+    date:findHeader(headers,['Date']),
+    time:findHeader(headers,['Time']),
+    dow:findHeader(headers,['Day of Week','DOW']),
+    fullName:findHeader(headers,['Full Name','Name']),
+    firstName:findHeader(headers,['First Name']),
+    lastName:findHeader(headers,['Last Name']),
+    phone:findHeader(headers,['Phone','Telephone','Cell']),
+    email:findHeader(headers,['Email','E-mail']),
+    newUsed:findHeader(headers,['New/Used','Condition']),
+    ctaType:findHeader(headers,['CTA Type','CTA','Call To Action']),
+    vehicleYear:findHeader(headers,['Vehicle Year','Year']),
+    vehicleMake:findHeader(headers,['Vehicle Make','Make']),
+    vehicleModel:findHeader(headers,['Vehicle Model','Model']),
+    vehicleTrim:findHeader(headers,['Vehicle Trim','Trim']),
+    stkVin:findHeader(headers,['Stk/Vin','Stock/VIN','Stock','VIN']),
+    zip:findHeader(headers,['Zip Code','ZIP','Postal Code','Postcode']),
+    pageSubmitted:findHeader(headers,['Page Submitted','Page URL','Landing Page']),
+    device:findHeader(headers,['Desktop/Mobile','Device']),
+    offer:findHeader(headers,['Offer','Promotion','Incentive']),
+    priceRange:findHeader(headers,['Price Range']),
+    productType:findHeader(headers,['Product Type','Product','ProductType','Type']),
+    referral:findHeader(headers,['Lead Source','Referral','Source','Campaign'],21)
+  };
+  var out=[];
+  for(var ri=0;ri<rows.length;ri++){
+    var r=rows[ri];
+    if (r.length===1 && r[0]==='') continue;
+    var o={
+      dealershipUrl:pick(r,H.dealershipUrl),
+      dealerName:pick(r,H.dealerName),
+      dateRaw:pick(r,H.date),
+      timeRaw:pick(r,H.time),
+      dayOfWeek:pick(r,H.dow),
+      fullName:pick(r,H.fullName),
+      firstName:pick(r,H.firstName),
+      lastName:pick(r,H.lastName),
+      phone:normalizePhone(pick(r,H.phone)),
+      email:(pick(r,H.email)||'').trim().toLowerCase(),
+      newUsed:pick(r,H.newUsed),
+      ctaType:pick(r,H.ctaType),
+      vehicleYear:pick(r,H.vehicleYear),
+      vehicleMake:pick(r,H.vehicleMake),
+      vehicleModel:pick(r,H.vehicleModel),
+      vehicleTrim:pick(r,H.vehicleTrim),
+      stkVin:pick(r,H.stkVin),
+      zip:pick(r,H.zip),
+      pageSubmitted:pick(r,H.pageSubmitted),
+      device:(pick(r,H.device)||'').toLowerCase(),
+      offer:pick(r,H.offer),
+      priceRange:pick(r,H.priceRange),
+      productType:pick(r,H.productType),
+      referral:pick(r,H.referral)
+    };
+    o.urlDomain = extractDomain(o.pageSubmitted || o.dealershipUrl || '');
+    o.timestamp = toIsoDateTime(o.dateRaw, o.timeRaw);
+    o.dateISO = o.timestamp ? o.timestamp.slice(0,10) : '';
+    o.hour = o.timestamp ? o.timestamp.slice(11,13) : '';
+    out.push(o);
+  }
+  return out;
+}
+function pick(arr,i){ return (i>=0&&i<arr.length) ? (arr[i]==null?'':String(arr[i])) : ''; }
+function normalizePhone(p){ var d=(p||'').replace(/\D+/g,''); if(!d) return ''; return (d.length===11 && d.indexOf('1')===0)?d.slice(1):d; }
+function extractDomain(url){ try{ return new URL(url).hostname.replace(/^www\./,''); }catch(e){ var m=String(url||'').match(/([a-z0-9.-]+\.[a-z]{2,})/i); return m?m[1].replace(/^www\./,''):''; } }
+function toIsoDateTime(dateStr,timeStr){ if(!dateStr) return ''; try{ var clean=String(dateStr).replace(/^[A-Za-z]+,\s*/,''); var d=new Date(clean + (timeStr?(' '+timeStr):'')); if(isNaN(d.getTime())) return ''; function pad(n){return String(n).padStart(2,'0');} return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }catch(e){ return ''; } }
+function unique(arr){ return Array.from(new Set(arr.filter(function(v){return v && String(v).trim().length;}))); }
+function countBy(arr){ var m={}; arr.forEach(function(v){ if(!v) return; m[v]=(m[v]||0)+1; }); return m; }
+
+/* ============================== DEPENDENT OPTIONS ============================== */
+function scopedRowsByDealer(){
+  var sel=STATE.selections.dealer;
+  if (!sel.length) return STATE.all;
+  return STATE.all.filter(function(r){return sel.indexOf(r.dealerName)!==-1;});
+}
+function refreshOptionsScoped(){
+  var base=scopedRowsByDealer();
+  UI.ms.newUsed.setOptions(unique(base.map(function(r){return r.newUsed;})).sort());
+  UI.ms.cta.setOptions(unique(base.map(function(r){return r.ctaType;})).sort());
+  UI.ms.device.setOptions(unique(base.map(function(r){return (r.device||'').toLowerCase();})).sort());
+  UI.ms.offer.setOptions(unique(base.map(function(r){return r.offer;})).sort());
+  UI.ms.year.setOptions(unique(base.map(function(r){return r.vehicleYear;})).sort(function(a,b){return String(a).localeCompare(String(b));}));
+  UI.ms.make.setOptions(unique(base.map(function(r){return r.vehicleMake;})).sort());
+  UI.ms.model.setOptions(unique(base.map(function(r){return r.vehicleModel;})).sort());
+  UI.ms.source.setOptions(unique(base.map(function(r){return r.referral;})).sort());
+  renderOffers(base);
+
+  UI.ms.newUsed.setSelected(STATE.selections.newUsed.filter(function(v){return base.some(function(r){return r.newUsed===v;});}));
+  UI.ms.cta.setSelected(STATE.selections.cta.filter(function(v){return base.some(function(r){return r.ctaType===v;});}));
+  UI.ms.device.setSelected(STATE.selections.device.filter(function(v){return base.some(function(r){return (r.device||'').toLowerCase()===v;});}));
+  UI.ms.offer.setSelected(STATE.selections.offer.filter(function(v){return base.some(function(r){return r.offer===v;});}));
+  UI.ms.year.setSelected(STATE.selections.year.filter(function(v){return base.some(function(r){return r.vehicleYear===v;});}));
+  UI.ms.make.setSelected(STATE.selections.make.filter(function(v){return base.some(function(r){return r.vehicleMake===v;});}));
+  UI.ms.model.setSelected(STATE.selections.model.filter(function(v){return base.some(function(r){return r.vehicleModel===v;});}));
+  UI.ms.source.setSelected(STATE.selections.source.filter(function(v){return base.some(function(r){return r.referral===v;});}));
+}
+
+/* ============================== FILTER COUNT BADGE ============================== */
+function updateFiltersCount(){
+  var total = 0;
+  try{
+    total += UI.ms.dealer?.getSelected().length || 0;
+    total += UI.ms.prod?.getSelected().length || 0;
+    total += UI.ms.newUsed?.getSelected().length || 0;
+    total += UI.ms.cta?.getSelected().length || 0;
+    total += UI.ms.device?.getSelected().length || 0;
+    total += UI.ms.offer?.getSelected().length || 0;
+    total += UI.ms.year?.getSelected().length || 0;
+    total += UI.ms.make?.getSelected().length || 0;
+    total += UI.ms.model?.getSelected().length || 0;
+    total += UI.ms.source?.getSelected().length || 0;
+
+    if ((document.getElementById('fDateFrom').value) || (document.getElementById('fDateTo').value)) total += 1;
+    if (UI.dedupe && UI.dedupe.checked) total += 1;
+
+    var el = document.getElementById('filtersCount');
+    if (el) el.textContent = String(total);
+  }catch(e){ /* noop */ }
+}
+
+/* ============================== FILTER + RENDER ============================== */
+function applyFilters(){
+  var q={
+    dealer:STATE.selections.dealer, prod:STATE.selections.prod, newUsed:STATE.selections.newUsed, cta:STATE.selections.cta,
+    device:STATE.selections.device, offer:STATE.selections.offer,
+    year:STATE.selections.year, make:STATE.selections.make, model:STATE.selections.model,
+    source:STATE.selections.source,
+    dateFrom:document.getElementById('fDateFrom').value||'',
+    dateTo:document.getElementById('fDateTo').value||'',
+    dedupe:UI.dedupe.checked
+  };
+  var s=STATE.searchText;
+
+  var rows=STATE.all.filter(function(r){
+    if (q.dealer.length && q.dealer.indexOf(r.dealerName)===-1) return false;
+    if (q.prod.length && q.prod.indexOf(r.productType)===-1) return false;
+    if (q.newUsed.length && q.newUsed.indexOf(r.newUsed)===-1) return false;
+    if (q.cta.length && q.cta.indexOf(r.ctaType)===-1) return false;
+    if (q.device.length && q.device.indexOf((r.device||'').toLowerCase())===-1) return false;
+    if (q.offer.length && q.offer.indexOf(r.offer)===-1) return false;
+    if (q.year.length && q.year.indexOf(r.vehicleYear)===-1) return false;
+    if (q.make.length && q.make.indexOf(r.vehicleMake)===-1) return false;
+    if (q.model.length && q.model.indexOf(r.vehicleModel)===-1) return false;
+    if (q.source.length && q.source.indexOf(r.referral)===-1) return false;
+    if (q.dateFrom && r.dateISO && r.dateISO < q.dateFrom) return false;
+    if (q.dateTo && r.dateISO && r.dateISO > q.dateTo) return false;
+    if (s){
+      var hay=[r.fullName,r.firstName,r.lastName,r.email,r.phone,r.vehicleMake,r.vehicleModel,r.vehicleTrim,r.stkVin,r.zip,r.offer,r.referral,r.urlDomain,r.dealerName,r.ctaType,(r.device||''),r.productType].join(' ').toLowerCase();
+      if (hay.indexOf(s)===-1) return false;
+    }
+    return true;
+  });
+
+  if (q.dedupe){
+    var seen={};
+    rows=rows.filter(function(r){
+      if (!r.email) return true;
+      if (seen[r.email]) return false;
+      seen[r.email]=1; return true;
+    });
+  }
+
+  STATE.filtered=rows;
+  renderEverything(rows);
+  updateFiltersCount();
+}
+function renderEverything(rows){
+  renderTable(rows);
+  renderKpis(rows);
+  renderCharts(rows);
+  updateZipView(rows);
+}
+function updateZipView(rows){
+  const isMap = STATE.zipView === 'map';
+  document.getElementById('zipViewLabel').textContent = isMap ? 'Map' : 'Boxes';
+  document.getElementById('zipMapInline').style.display = isMap ? '' : 'none';
+  UI.zipHeatGrid.style.display = isMap ? 'none' : '';
+  UI.zipToggle.style.display = isMap ? 'none' : '';
+  if (isMap){ renderLeafletHeat(rows, 'zipMapInline'); }
+  else { renderZipHeatGrid(rows); }
+}
+
+/* ============================== OFFERS ============================== */
+function renderOffers(baseRows){
+  var byOffer=countBy(baseRows.map(function(r){return r.offer;}));
+  var entries=Object.keys(byOffer).filter(function(k){return k;}).map(function(k){return [k,byOffer[k]];}).sort(function(a,b){return b[1]-a[1];});
+  var limit=STATE.offersExpanded?entries.length:12;
+  var view=entries.slice(0,limit);
+  document.getElementById('offersChips').innerHTML =
+    view.map(function(e){
+      var name=e[0], count=e[1];
+      return '<div class="chip '+(STATE.selections.offer.indexOf(name)!==-1?'active':'')+'" data-offer="'+escapeHtml(name)+'">'+escapeHtml(name)+' <span class="count">('+count+')</span></div>';
+    }).join('') + (entries.length>limit?('<span class="chip">+'+(entries.length-limit)+' more</span>'):'');
+
+  Array.prototype.forEach.call(document.querySelectorAll('#offersChips .chip[data-offer]'), function(chip){
+    chip.addEventListener('click', function(){
+      chip.classList.toggle('active');
+      var active=Array.prototype.slice.call(document.querySelectorAll('#offersChips .chip.active')).map(function(c){return c.getAttribute('data-offer');});
+      STATE.selections.offer=active; UI.ms.offer.setSelected(active); applyFilters();
+    });
+  });
+}
+
+/* ============================== TABLE / KPIs / CHARTS ============================== */
+function formatMMDDYYYY(iso){
+  if (!iso) return '';
+  const parts = iso.split('-'); if (parts.length<3) return iso;
+  const [y,m,d]=parts; return `${m}/${d}/${y}`;
+}
+function renderTable(rows){
+  const head=document.querySelector('#dataTable thead');
+  const body=document.querySelector('#dataTable tbody');
+  if (!rows.length){ head.innerHTML='<tr><th>No data</th></tr>'; body.innerHTML=''; return; }
+  var cols=['dateISO','timeRaw','dealerName','dealershipUrl','fullName','email','phone','productType','ctaType','newUsed','device','vehicleYear','vehicleMake','vehicleModel','vehicleTrim','stkVin','zip','offer','priceRange','urlDomain','pageSubmitted','referral'];
+  var labels={dateISO:'Date',timeRaw:'Time',dealerName:'Dealership',dealershipUrl:'Domain/URL',fullName:'Name',email:'Email',phone:'Phone',productType:'Product',ctaType:'CTA Type',newUsed:'New/Used',device:'Device',vehicleYear:'Year',vehicleMake:'Make',vehicleModel:'Model',vehicleTrim:'Trim',stkVin:'Stk/VIN',zip:'Zip',offer:'Offer',priceRange:'Price Range',urlDomain:'Source (Domain)',pageSubmitted:'Page URL', referral:'Lead Source'};
+  head.innerHTML='<tr>'+cols.map(function(c){return '<th>'+(labels[c]||c)+'</th>';}).join('')+'</tr>';
+  body.innerHTML = rows.map(function(r){
+    return '<tr>'+cols.map(function(c){return cellHtml(c,r[c],r);}).join('')+'</tr>';
+  }).join('');
+}
+function cellHtml(key,val,row){
+  if (!val && key!=='device' && key!=='dateISO') return '<td></td>';
+  if (key==='dateISO') return `<td>${escapeHtml(formatMMDDYYYY(row.dateISO))}</td>`;
+  if (key==='pageSubmitted') return '<td><a href="'+escapeHtml(val)+'" target="_blank">Open</a></td>';
+  if (key==='email' || key==='phone') return '<td>'+escapeHtml(String(val))+'</td>';
+  if (key==='device'){ var d=(row.device||''); return '<td><span class="device-cell">'+deviceIcon(d,14)+' '+escapeHtml(d)+'</span></td>'; }
+  return '<td>'+escapeHtml(String(val||''))+'</td>';
+}
+function renderKpis(rows){
+  document.getElementById('kpiTotal').textContent=rows.length.toLocaleString();
+  document.getElementById('kpiUniqueEmails').textContent=new Set(rows.map(function(r){return r.email;}).filter(Boolean)).size.toLocaleString();
+  var stores={}; var sales=0,service=0,desktop=0,mobile=0;
+  rows.forEach(function(r){ if (r.dealerName) stores[r.dealerName]=1; var p=(r.productType||'').toLowerCase(); if(p==='sales') sales++; if(p==='service') service++; var d=(r.device||'').toLowerCase(); if(d==='desktop') desktop++; if(d==='mobile') mobile++; });
+  document.getElementById('kpiStores').textContent=Object.keys(stores).length.toLocaleString();
+  document.getElementById('kpiSalesService').textContent=sales+' / '+service;
+  document.getElementById('kpiDevice').textContent=desktop+' / '+mobile;
+}
+function renderCharts(rows){
+  var weekdays=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var byDay=[0,0,0,0,0,0,0];
+  rows.forEach(function(r){ if (r.timestamp){ byDay[new Date(r.timestamp).getDay()]++; }});
+  drawBar('chartByDay','Leads by Weekday',weekdays,byDay,'byDay');
+
+  var byModel=countBy(rows.map(function(r){return r.vehicleModel;}));
+  var modelEntries=Object.keys(byModel).filter(function(k){return k;}).map(function(k){return [k,byModel[k]];});
+  modelEntries.sort(function(a,b){return b[1]-a[1];});
+  var modelTop=modelEntries.slice(0,10);
+  var labels=modelTop.map(function(m){return m[0]+' ('+m[1]+')';});
+  var data=modelTop.map(function(m){return m[1];});
+  drawBar('chartTopModels','Top Models (Top 10)', labels, data, 'topModels');
+}
+function drawBar(canvasId,title,labels,data,key){
+  var ctx=document.getElementById(canvasId).getContext('2d');
+  if (UI.charts[key]) UI.charts[key].destroy();
+  UI.charts[key]=new Chart(ctx,{
+    type:'bar',
+    data:{ labels:labels, datasets:[{ label:title, data:data }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, title:{display:true,text:title} },
+      scales:{ y:{ beginAtZero:true } } }
+  });
+}
+
+/* ================= ZIP GEOCODER (caches in localStorage) ================= */
+const ZIP_CACHE_KEY = 'gv_zip_coords_cache';
+function loadZipCache(){
+  try { return JSON.parse(localStorage.getItem(ZIP_CACHE_KEY) || '{}') || {}; }
+  catch(e){ return {}; }
+}
+function saveZipCache(cache){
+  try { localStorage.setItem(ZIP_CACHE_KEY, JSON.stringify(cache || {})); } catch(e){}
+}
+async function geocodeZip(zip){
+  const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+  if (!res.ok) throw new Error('lookup failed');
+  const j = await res.json();
+  const p = (j.places && j.places[0]) || null;
+  if (!p) throw new Error('no places');
+  const lat = parseFloat(p.latitude), lng = parseFloat(p.longitude);
+  if (!isFinite(lat) || !isFinite(lng)) throw new Error('bad coords');
+  return [lat, lng];
+}
+async function ensureZipCoords(zips, onProgress){
+  const cache = loadZipCache();
+  STATE.zipCoords = { ...cache, ...STATE.zipCoords };
+  const missing = zips.filter(z => z && !STATE.zipCoords[z]);
+  if (!missing.length) return;
+
+  const throttleMs = 250; let done = 0;
+  for (const zip of missing){
+    try{
+      const ll = await geocodeZip(zip);
+      STATE.zipCoords[zip] = ll;
+      cache[zip] = ll;
+      saveZipCache(cache);
+    }catch(e){ /* ignore */ }
+    finally{
+      done++;
+      if (onProgress) onProgress(done, missing.length);
+      await new Promise(r=>setTimeout(r, throttleMs));
+    }
+  }
+}
+
+/* ============================== ZIP HEAT (Leaflet inline) ============================== */
+function renderLeafletHeat(rows, elId){
+  elId = elId || 'zipMapInline';
+  const el = document.getElementById(elId);
+  if (!el) return;
+
+  const rawZips = rows.map(r => (r.zip || '').trim()).filter(Boolean);
+  const uniqZips = Array.from(new Set(rawZips));
+  const missing = uniqZips.filter(z => !(STATE.zipCoords && STATE.zipCoords[z]));
+
+  if (missing.length){
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px;">
+      Geocoding ${missing.length} ZIP${missing.length>1?'s':''}… (first time only)
+    </div>`;
+    ensureZipCoords(missing, (done,total)=>{
+      el.innerHTML = `<div style="color:var(--muted);font-size:13px;">
+        Geocoding ${done}/${total}…
+      </div>`;
+    }).then(()=>renderLeafletHeat(rows, elId));
+    return;
+  }
+
+  const counts = countBy(rawZips);
+  const points = [];
+  for (const zip in counts){
+    const ll = STATE.zipCoords[zip];
+    if (ll && ll.length === 2) points.push([ll[0], ll[1], counts[zip]]);
+  }
+
+  if (!points.length){
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;">No geocoded ZIPs to display.</div>';
+    return;
+  }
+
+  if (!UI.zipMap){
+    UI.zipMap = L.map(elId);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {maxZoom:18, attribution:'&copy; OpenStreetMap'}).addTo(UI.zipMap);
+  } else {
+    if (UI.zipMap._container.id !== elId){
+      UI.zipMap.remove();
+      UI.zipMap = L.map(elId);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {maxZoom:18, attribution:'&copy; OpenStreetMap'}).addTo(UI.zipMap);
+    }
+    UI.zipMap.eachLayer(layer => { if (layer instanceof L.HeatLayer) UI.zipMap.removeLayer(layer); });
+  }
+
+  L.heatLayer(points, { radius:25, blur:15, maxZoom:11 }).addTo(UI.zipMap);
+  const bounds = L.latLngBounds(points.map(p => [p[0], p[1]]));
+  UI.zipMap.fitBounds(bounds.pad(0.2));
+}
+
+/* ============================== ZIP BOXES ============================== */
+function renderZipHeatGrid(rows){
+  var counts = countBy(rows.map(function(r){return (r.zip||'').trim();}));
+  var entries = Object.keys(counts).filter(function(z){return z;})
+    .map(function(z){return [z,counts[z]];})
+    .sort(function(a,b){return b[1]-a[1];});
+
+  var limit = STATE.zipsExpanded ? entries.length : 12;
+  var top = entries.slice(0, limit);
+  var max = top.length ? Math.max.apply(null, top.map(function(t){return t[1];})) : 1;
+
+  document.getElementById('zipHeatGrid').innerHTML = top.map(function(t){
+    var zip=t[0], count=t[1];
+    var a = 0.25 + 0.5*(count/max);
+    return '<div class="zip-cell" style="background:rgba(108,157,255,'+a+');">'+
+             '<div class="zip-label">'+escapeHtml(zip)+'</div>'+
+             '<div class="zip-count">'+count+'</div>'+
+           '</div>';
+  }).join('');
+
+  document.getElementById('zipToggle').textContent = STATE.zipsExpanded ? 'Show less' : 'Show more';
+}
+
+/* ============================== EXPORTS ============================== */
+function exportCsv(){
+  var rows=STATE.filtered; if (!rows.length){ alert('No rows to export.'); return; }
+  var headers=Object.keys(rows[0]);
+  var csv=[headers.join(',')].concat(rows.map(function(o){return headers.map(function(h){return csvCell(o[h]);}).join(',');})).join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download='leads_export_'+new Date().toISOString().slice(0,10)+'.csv'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
+
+/* ===== Single-mode PDF export (Clean) ===== */
+function exportPdf(){
+  document.body.setAttribute('data-print-mode', 'clean');
+
+  var rows = STATE.filtered || [];
+  buildPrintSummary(rows);
+
+  var pT = document.getElementById('printTable');
+  if (pT) pT.innerHTML = '';
+
+  window.print();
+  setTimeout(function(){ document.body.removeAttribute('data-print-mode'); }, 0);
+}
+
+/* ===== Summary content for clean PDF ===== */
+function buildPrintSummary(rows){
+  var container = document.getElementById('printSummary');
+  if (!container) return;
+
+  const selectedDealers = (UI.ms.dealer && UI.ms.dealer.getSelected) ? UI.ms.dealer.getSelected() : [];
+  const dealersAll = selectedDealers && selectedDealers.length
+    ? selectedDealers
+    : unique(STATE.all.map(r=>r.dealerName)).filter(Boolean);
+
+  const dFrom = document.getElementById('fDateFrom').value || '';
+  const dTo   = document.getElementById('fDateTo').value   || '';
+  function fmt(iso){ if (!iso) return ''; const [y,m,d]=iso.split('-'); return `${m}/${d}/${y}`; }
+  let dateText = 'All dates';
+  if (dFrom && dTo) dateText = `${fmt(dFrom)} – ${fmt(dTo)}`;
+  else if (dFrom)   dateText = `Since ${fmt(dFrom)}`;
+  else if (dTo)     dateText = `Through ${fmt(dTo)}`;
+
+  var uniqueEmails = new Set(rows.map(function(r){return r.email;}).filter(Boolean)).size;
+  var stores = new Set(rows.map(function(r){return r.dealerName;}).filter(Boolean)).size;
+  var sales=0, service=0, desktop=0, mobile=0;
+  rows.forEach(function(r){
+    var p=(r.productType||'').toLowerCase();
+    if(p==='sales') sales++;
+    if(p==='service') service++;
+    var d=(r.device||'').toLowerCase();
+    if(d==='desktop') desktop++;
+    if(d==='mobile') mobile++;
+  });
+
+  var weekdays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var byDay=[0,0,0,0,0,0,0];
+  rows.forEach(function(r){ if (r.timestamp){ byDay[new Date(r.timestamp).getDay()]++; }});
+
+  container.innerHTML = '\
+    <h1 style="margin:0 0 8px 0;">DealerLeads — Summary</h1>\
+    <p style="margin:0 0 12px 0; color:#333;">Generated on '+new Date().toLocaleString()+'</p>\
+    <section style="margin:0 0 12px 0; padding:10px; border:1px solid #ddd; border-radius:8px;">\
+      <h2 style="margin:0 0 8px 0;">Scope</h2>\
+      <div style="font-size:12px;color:#555;">Date Range</div><strong>'+dateText+'</strong>\
+    </section>\
+    <section style="margin:0 0 12px 0; padding:10px; border:1px solid #ddd; border-radius:8px;">\
+      <h2 style="margin:0 0 8px 0;">KPIs</h2>\
+      <ul style="margin:0; padding-left:16px;">\
+        <li>Total Leads: <strong>'+rows.length.toLocaleString()+'</strong></li>\
+        <li>Unique Leads (by Email): <strong>'+uniqueEmails.toLocaleString()+'</strong></li>\
+        <li>Unique Dealerships (in results): <strong>'+stores.toLocaleString()+'</strong></li>\
+        <li>Sales / Service: <strong>'+sales+'</strong> / <strong>'+service+'</strong></li>\
+        <li>Desktop / Mobile: <strong>'+desktop+'</strong> / <strong>'+mobile+'</strong></li>\
+      </ul>\
+    </section>\
+    <section style="margin:0 0 12px 0; padding:10px; border:1px solid #ddd; border-radius:8px;">\
+      <h2 style="margin:0 0 8px 0;">Leads by Weekday</h2>\
+      <ul style="margin:0; padding-left:16px;">'+
+        weekdays.map(function(w,i){return '<li>'+w+': '+byDay[i]+'</li>';}).join('')+
+      '</ul>\
+    </section>\
+    <p style="font-size:12px; color:#666; margin-top:10px;">\
+      Clean export hides all customer-identifiable data.\
+    </p>';
+}
+
+/* ============================== HELPERS ============================== */
+function escapeHtml(str){ return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;'); }
+function csvCell(v){ if (v==null) return ''; var s=String(v); if (s.indexOf('"')>-1||s.indexOf(',')>-1||s.indexOf('\n')>-1) s='"'+s.replace(/"/g,'""')+'"'; return s; }
+function pick(arr,i){ return (i>=0&&i<arr.length) ? (arr[i]==null?'':String(arr[i])) : ''; }
+function toIsoDateTime(dateStr,timeStr){ if(!dateStr) return ''; try{ var clean=String(dateStr).replace(/^[A-Za-z]+,\s*/,''); var d=new Date(clean + (timeStr?(' '+timeStr):'')); if(isNaN(d.getTime())) return ''; function pad(n){return String(n).padStart(2,'0');} return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }catch(e){ return ''; } }
+function normalizePhone(p){ var d=(p||'').replace(/\D+/g,''); if(!d) return ''; return (d.length===11 && d.indexOf('1')===0)?d.slice(1):d; }
+</script>
+</body>
+</html>
