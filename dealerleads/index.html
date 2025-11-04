@@ -524,7 +524,7 @@ function getTheme(){ return localStorage.getItem('gv_theme') || 'dark'; }
 function setTheme(t){
   document.documentElement.setAttribute('data-theme', t);
   localStorage.setItem('gv_theme', t);
-  const darkLogo = "";
+  const darkLogo = "https://theleadlasso.com/assets/DealerLeadsWhite2.png";
   const lightLogo = "https://theleadlasso.com/assets/DealerLeadsColor.png";
   document.getElementById('brandLogo').src = (t==='light') ? lightLogo : darkLogo;
   document.getElementById('lockLogo').src = (t==='light') ? lightLogo : darkLogo;
