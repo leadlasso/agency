@@ -4,8 +4,8 @@
     "api/_guard.js": { "runtime": "edge" },
     "api/leads.js": { "runtime": "nodejs20.x" }
   },
-  "routes": [
-    { "src": "^/api/leads$", "dest": "/api/leads.js" },
-    { "src": "/(.*)", "dest": "/api/_guard.js" }
+  "rewrites": [
+    { "source": "/api/leads", "destination": "/api/leads.js" },
+    { "source": "/(.*)", "destination": "/api/_guard.js" }
   ]
 }
