@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const USER = process.env.DASH_USER || 'client';
-const PASS = process.env.DASH_PASS || 'GV2025';
+const PASS = process.env.DASH_PASS || 'IRONCLAW2025';
 
 export default async function handler(req, res) {
   const auth = req.headers.authorization || '';
