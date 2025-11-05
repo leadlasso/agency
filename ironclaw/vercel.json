@@ -5,6 +5,7 @@
     "api/leads.js": { "runtime": "nodejs20.x" }
   },
   "rewrites": [
+    { "source": "/index.html", "destination": "/index.html" },
     { "source": "/api/leads", "destination": "/api/leads.js" },
     { "source": "/(.*)", "destination": "/api/_guard.js" }
   ]
