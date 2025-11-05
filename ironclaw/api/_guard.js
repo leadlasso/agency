@@ -1,4 +1,3 @@
-// api/_guard.js
 export default async function handler(req) {
   const USER = process.env.BASIC_AUTH_USER || "admin";
   const PASS = process.env.BASIC_AUTH_PASS || "IRONCLAW2025";
@@ -16,8 +15,8 @@ export default async function handler(req) {
     });
   }
 
-  // Auth OK → serve index.html
+  // Authorized → redirect to the file-system escape hatch
   const url = new URL(req.url);
-  const resp = await fetch(new URL("/index.html", url), { headers: req.headers });
-  return new Response(resp.body, { status: resp.status, headers: resp.headers });
+  url.pathname = "/index.html";
+  return Response.redirect(url, 307);
 }
