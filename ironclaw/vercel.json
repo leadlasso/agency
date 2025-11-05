@@ -1,4 +1,11 @@
 {
   "version": 2,
-  "routes": [{ "src": "/(.*)", "dest": "/index.html" }]
+  "functions": {
+    "api/_guard.js": { "runtime": "edge" },
+    "api/leads.js": { "runtime": "nodejs20.x" }
+  },
+  "routes": [
+    { "src": "^/api/leads$", "dest": "/api/leads.js" },
+    { "src": "/(.*)", "dest": "/api/_guard.js" }
+  ]
 }
