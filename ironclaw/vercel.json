@@ -2,7 +2,7 @@
   "version": 2,
   "functions": {
     "api/_guard.js": { "runtime": "edge" },
-    "api/leads.js": { "runtime": "nodejs20.x" }  // or nodejs18.x
+    "api/leads.js": { "runtime": "nodejs20.x" }
   },
   "routes": [
     { "src": "^/api/leads$", "dest": "/api/leads.js" },
