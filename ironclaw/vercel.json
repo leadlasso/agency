@@ -1,4 +1,6 @@
 {
-  "version": 2,
-  "routes": [{ "src": "/(.*)", "dest": "/index.html" }]
+  "routes": [
+    { "src": "^/api/leads$", "dest": "/api/leads.js" },
+    { "src": "/(.*)", "dest": "/api/app.js" }
+  ]
 }
