@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>v3 DealerLeads Dashboard (beta)</title>
+<title> v2 DealerLeads Dashboard (beta)</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
 <style>
   :root{
     --bg:#0e1124; --panel:#161a2f; --muted:#8a90b0; --text:#e8ecff;
@@ -22,10 +23,17 @@
     --ring:#90b4ff; --chip-bg:#f1f5ff; --chip-border:#cbd5e1;
   }
 
-  html,body{height:100%;margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text);}
+  html,body{
+    height:100%;
+    margin:0;
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    background:var(--bg);
+    color:var(--text);
+  }
+  body.no-scroll{ overflow:hidden; }   /* ← Added fix */
   a{color:var(--accent); text-decoration:none;}
 
-  /* Base inputs (used elsewhere, not for login controls) */
+  /* Inputs */
   input[type="text"],input[type="password"],input[type="date"]{
     background:#0b112c;border:1px solid var(--border);color:#e8ecff;
     border-radius:12px;padding:12px 14px;font-size:14px;outline:none;
@@ -54,10 +62,10 @@
   }
   .btn-sm{ padding:8px 10px; border-radius:10px; font-size:12px; }
 
-  /* Red pill button (Video Library) */
+  /* Red pill button */
   .btn-danger{
     background:#ef4444; color:#ffffff;
-    border:none; border-radius:999px; /* pill */
+    border:none; border-radius:999px;
     padding:10px 16px; font-weight:800;
   }
   .btn-danger:hover{ filter:brightness(1.05); }
@@ -68,240 +76,46 @@
   .dropdown-menu{
     position:absolute; right:0; top:calc(100% + 6px);
     min-width:200px; background:var(--overlay); color:inherit;
-    border:1px solid var(--border); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.45);
+    border:1px solid var(--border); border-radius:12px;
     padding:6px; display:none; z-index:3000;
   }
-  [data-theme="light"] .dropdown-menu{ background:#fff; }
   .dropdown.open .dropdown-menu{ display:block; }
   .dropdown-item{
     width:100%; text-align:left; padding:10px 12px; border-radius:10px;
-    background:transparent; border:none; color:inherit; cursor:pointer; font-weight:600;
+    background:transparent; border:none; cursor:pointer; font-weight:600;
     display:flex; align-items:center; gap:10px;
   }
   .dropdown-item:hover{ background:#11173a; }
-  [data-theme="light"] .dropdown-item:hover{ background:#f2f6ff; }
-  .dropdown-item svg{ width:16px; height:16px; opacity:.95; flex:0 0 auto; }
 
   /* Layout */
-  .container{max-width:1320px;margin:0 auto;padding:22px;overflow:visible;}
+  .container{max-width:1320px;margin:0 auto;padding:22px;}
   .app-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
   .brand{display:flex;align-items:center;gap:12px;}
-  .brand img{height:44px;width:auto;display:block;}
+  .brand img{height:44px;}
   .title h1{margin:0;font-size:24px;}
   .title .sub{margin:2px 0 0;color:var(--muted);font-size:12px;}
-  .header-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
-
-  /* Compact dealer */
-  .brand { gap: 16px; flex-wrap: wrap; }
-  .brand-controls{ display:flex; flex-direction:column; gap:4px; min-width:200px; }
-  .brand-dealer-label{ color:var(--muted); font-size:11px; margin-left:2px; }
-  .ms-compact .ms-toggle{ min-height:38px; padding:8px 10px; }
-  .ms-compact{ position:relative; }
-  .ms-compact .ms-panel{ left:auto; right:0; width:320px; max-width:92vw; }
-  .ms-compact .ms-search{ padding:6px 8px; display:flex; justify-content:center; }
-  .ms-compact .ms-search input{ width:100%; max-width:260px; height:36px; font-size:13px; padding:8px 10px; border-radius:10px; }
-  .ms-compact .ms-list{ max-width:260px; margin:0 auto; }
-
-  /* Scrollbars */
-  *{scrollbar-width:thin;scrollbar-color:#3a4580 #0b112c;}
-  *::-webkit-scrollbar{height:10px;width:10px}
-  *::-webkit-scrollbar-track{background:#0b112c;border-radius:12px}
-  *::-webkit-scrollbar-thumb{background:#3a4580;border-radius:12px;border:2px solid #0b112c}
-  [data-theme="light"] *::-webkit-scrollbar-track{background:#eef2ff}
-  [data-theme="light"] *::-webkit-scrollbar-thumb{background:#94a3b8;border-color:#eef2ff}
-
-  /* Theme toggle */
-  .theme-toggle{
-    display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);
-    border-radius:12px;padding:8px 12px;background:transparent;color:inherit;
-    cursor:pointer;font-weight:600;font-size:13px;
-  }
-  .theme-toggle:hover{ background:rgba(127,127,127,.08); }
-  .icon-contrast{ width:18px;height:18px;stroke:currentColor;color:currentColor; }
-
-  /* Collapsible filters */
-  .filters-wrap{position:sticky;top:0;z-index:500;}
-  .filters-toggle{
-    display:flex;align-items:center;gap:8px;justify-content:space-between;
-    background:linear-gradient(0deg, rgba(22,26,47,.98), rgba(22,26,47,.98));backdrop-filter:saturate(120%) blur(8px);
-    border:1px solid var(--border);border-radius:16px;padding:10px 12px;margin:12px 0;
-    box-sizing:border-box;
-  }
-  [data-theme="light"] .filters-toggle{background:#fff;}
-  .filters{
-    background:linear-gradient(0deg, rgba(22,26,47,.98), rgba(22,26,47,.98));backdrop-filter:saturate(120%) blur(8px);
-    border:1px solid var(--border);border-radius:16px;padding:16px;margin:10px 0;display:none; overflow:visible;
-  }
-  [data-theme="light"] .filters{background:#fff;}
-  .filters.open{display:block;}
-  .filter-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-  .field{display:flex;flex-direction:column;gap:6px;position:relative;}
-  .field > label{color:var(--muted);font-size:12px; pointer-events:none;}
-
-  .filters-badge{
-    display:inline-flex;align-items:center;justify-content:center;
-    min-width:22px;height:20px;padding:0 8px;border-radius:999px;
-    background:var(--chip-bg);border:1px solid var(--chip-border);
-    color:inherit;font-size:12px;font-weight:700;
-  }
 
   /* Multiselect */
-  .ms{position:relative; z-index:1;}
+  .ms{position:relative;}
   .ms-toggle{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
-    background:var(--chip-bg);color:var(--text);border:1px solid var(--border);
+    background:var(--chip-bg);border:1px solid var(--border);
     border-radius:12px;padding:10px 12px;cursor:pointer;min-height:44px;
-    -webkit-tap-highlight-color: transparent; touch-action:manipulation;
   }
-  .ms-toggle:focus{outline:none;box-shadow:0 0 0 3px rgba(122,160,255,.25);}
-  .ms-toggle .summary{display:flex;flex-wrap:wrap;gap:6px;min-height:20px;align-items:center;}
-  .ms-chip{background:#121a3f;border:1px solid #2a3567;border-radius:999px;padding:4px 8px;font-size:12px;display:inline-flex;align-items:center;gap:6px;}
-  [data-theme="light"] .ms-chip{background:var(--chip-bg);border-color:var(--chip-border);}
-  .ms-count{font-size:12px;color:var(--muted);margin-left:6px;}
-  .ms-caret{opacity:.8}
   .ms-panel{
-    position:absolute; z-index:1000; top:calc(100% + 6px);
-    left:0; right:0; background:var(--overlay);
-    border:1px solid var(--border); border-radius:12px;
-    max-height:320px; overflow:auto; box-shadow:0 10px 30px rgba(0,0,0,.45);
-    display:none;
-  }
-  .ms.open .ms-panel{display:block;}
-  .ms-search{position:sticky;top:0;background:var(--overlay);padding:8px;border-bottom:1px solid var(--border);z-index:1;}
-  .ms-search input{width:100%;}
-  .ms-list{padding:8px;}
-  .ms-item{display:flex;gap:8px;align-items:center;padding:8px 6px;cursor:pointer;border-radius:8px;user-select:none;}
-  .ms-item:hover{background:#11173a;}
-  [data-theme="light"] .ms-item:hover{background:#f2f6ff;}
-  .ms-item input{pointer-events:none;}
-  .ms-actions{position:sticky;bottom:0;background:var(--overlay);display:flex;gap:8px;justify-content:flex-end;padding:8px;border-top:1px solid var(--border);}
-  .ms-actions .btn{padding:8px 10px;border-radius:8px;font-size:12px;}
-
-  /* KPIs / Cards / Table */
-  .kpis{position:sticky;top:94px;z-index:400;background:linear-gradient(0deg, rgba(22,26,47,.97), rgba(22,26,47,.97));backdrop-filter:saturate(120%) blur(6px);
-    border:1px solid var(--border);border-radius:16px;padding:12px;margin:12px 0;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
-  [data-theme="light"] .kpis{background:#fff;}
-  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;}
-  .kpi-label{color:var(--muted);font-size:12px;margin-bottom:6px;}
-  .kpi-value{font-size:22px;font-weight:700;}
-  .grid-two{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px;}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:16px;}
-  .card h3{margin:0 0 10px 0;font-size:16px;}
-  .offers-chips{display:flex;flex-wrap:wrap;gap:8px;}
-  .chip{background:var(--chip-bg);border:1px solid var(--chip-border);border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer;}
-  .chip.active{background:#223166;border-color:#4656a2;color:#fff;}
-  [data-theme="light"] .chip.active{background:#2a66ff;color:#fff;border-color:#2a66ff;}
-  .chip .count{opacity:.8;margin-left:6px;}
-  .offers-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
-
-  .chart-wrap{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:12px;margin-top:12px;}
-  .chart-row{display:grid;grid-template-columns:1fr;gap:12px;}
-  .chart-row-3{display:grid;grid-template-columns:1fr;gap:12px;}
-  .chart-wrap canvas{width:100%;height:170px !important;}
-  .table-wrap{background:var(--panel);border:1px solid var(--border);border-radius:16px;margin:18px 0;position:relative;}
-  .table-actions{padding:12px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
-  .table-actions input[type="text"]{flex:1;min-width:260px;}
-  .table-scroll{display:block;max-height:60vh;overflow:auto;border-bottom-left-radius:16px;border-bottom-right-radius:16px;}
-  table{width:100%;border-collapse:collapse;}
-  thead th{position:sticky;top:0;background:#121533;border-bottom:1px solid var(--border);text-align:left;padding:10px;font-size:12px;color:#b7bce1;z-index:2;}
-  [data-theme="light"] thead th{background:#eef2ff;color:#0e1333;}
-  tbody td{padding:10px;border-bottom:1px solid var(--border);font-size:13px;}
-  tbody tr:hover{background:#12153322;}
-  [data-theme="light"] tbody tr:hover{background:#f1f5ff;}
-  .app-footer{color:var(--muted);font-size:12px;margin-top:12px;text-align:center;}
-
-  /* Quick date alignment */
-  .quick-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
-  .quick-row .date-inline{display:flex;align-items:center;gap:6px;}
-  .quick-row .date-inline input[type="date"]{width:135px;min-width:120px;padding:8px 10px;border-radius:10px;font-size:13px;}
-
-  /* Login overlay */
-  .lock-overlay{position:fixed;inset:0;background:rgba(3,6,20,.9);display:flex;align-items:center;justify-content:center;z-index:99999;}
-  [data-theme="light"] .lock-overlay{background:rgba(248,250,252,.95);}
-  .lock-card{width:min(520px,92vw);background:#121533;border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.45);color:#e6e9ff;}
-  [data-theme="light"] .lock-card{background:#ffffff;color:#0e1333;}
-  .lock-card h2{margin:0 0 6px 0;font-size:20px;}
-  .lock-card p{margin:0 0 14px 0;color:var(--muted);font-size:13px;}
-  .login-row{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:8px;}
-  .lock-card .login-row input{ width:100%; }
-
-  /* Unified controls for Username & Password */
-  .lock-row{
-    display:grid;
-    grid-template-columns: 1fr auto;
-    gap:8px;
-    align-items:stretch;
-  }
-  .control{
-    display:flex;
-    align-items:center;
-    height:44px;
-    border:1px solid var(--border);
-    border-radius:12px;
-    background:var(--panel);
-    overflow:hidden;
-    min-width:0;
-  }
-  .control input{
-    flex:1; min-width:0;
-    height:100%;
-    border:0;
-    background:transparent;
-    color:inherit;
-    padding:0 12px;
-    font-size:14px;
-  }
-  .control .btn-inline{
-    height:100%;
-    border:0;
-    border-left:1px solid var(--border);
-    background:transparent;
-    color:inherit;
-    padding:0 14px;
-    font-weight:700;
-    cursor:pointer;
-    border-radius:0 12px 12px 0;
-    display:inline-flex; align-items:center; justify-content:center;
-    line-height:1;
-  }
-  [data-theme="light"] .control{ background:#fff; }
-  .lock-actions{display:flex;align-items:stretch;}
-  .lock-actions .btn{height:44px;}
-  @media (max-width:640px){ .control{height:40px;} .lock-actions .btn{height:40px;} }
-
-  /* ZIP area + spacing */
-  .zip-controls{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-  #zipMapInline{ height:360px; border-radius:12px; overflow:hidden; margin-top:8px; }
-  #zipHeatGrid{ margin-top:8px; }
-  @media (max-width:640px){ #zipMapInline{ height:300px; } }
-
-  /* ZIP boxes */
-  .zip-heat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;}
-  .zip-cell{background:#0c0f1d;border:1px solid var(--border);border-radius:12px;padding:10px;}
-  [data-theme="light"] .zip-cell{background:#f8fafc;}
-  .zip-label{font-size:12px;color:#b7bce1;}
-  [data-theme="light"] .zip-label{color:#334155;}
-  .zip-count{font-weight:700;margin-top:4px;}
-
-  /* Print */
-  @media print{
-    :root{ --bg:#fff; --panel:#fff; --text:#000; --muted:#333; --border:#ddd; }
-    html, body{ background:#fff; color:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    .app-header,.filters-wrap,.app-footer,.lock-overlay{ display:none !important; }
-    body[data-print-mode="clean"] .table-wrap{ display:none !important; }
-    body[data-print-mode="clean"] #printTable{ display:none !important; }
-    .chip{ background:#ffffff !important; border:1px solid #bbb !important; color:#000 !important; }
-    .card, .chart-wrap, .kpis{ border:1px solid #ccc !important; }
-    a[href]:after{ content:""; }
+    position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:2000;
+    background:var(--overlay);border:1px solid var(--border);border-radius:12px;
+    max-height:320px;overflow:auto;
   }
 
-  .print-summary{ display:none; }
-  #printTable{ display:none; }
+  /* KPIs */
+  .kpis{
+    position:sticky;top:94px;z-index:400;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:12px;padding:12px;margin:12px 0;
+    background:var(--panel);border:1px solid var(--border);border-radius:16px;
+  }
 
-  /* Multiselect stacking fix */
-  .ms{ position: relative; z-index: auto !important; }
-  .ms .ms-panel{ z-index: 2000 !important; }
-  @media (max-width: 640px){ .ms .ms-panel{ z-index: 10050 !important; } }
 </style>
 </head>
 <body>
@@ -309,19 +123,20 @@
 <!-- Login -->
 <div id="lock" class="lock-overlay" style="display:flex;">
   <div class="lock-card">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;justify-content:space-between;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <div style="display:flex;align-items:center;gap:10px;">
-        <img id="lockLogo" src="https://theleadlasso.com/assets/dealersleads_white3.png" alt="Logo" style="height:36px;width:auto;">
-        <h2 style="margin:0;">Enter Dashboard Access (beta) </h2>
+        <img id="lockLogo" src="https://theleadlasso.com/agency/gvleads/GVLeads_White.png" style="height:36px;">
+        <h2 style="margin:0;">Enter Dashboard Access (beta)</h2>
       </div>
-      <button id="lockTheme" class="theme-toggle" type="button" title="Toggle Light/Dark Theme">
-        <svg class="icon-contrast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button id="lockTheme" class="theme-toggle">
+        <svg class="icon-contrast" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="9"></circle>
-          <path d="M12 3a9 9 0 0 1 0 18V3z" fill="currentColor" stroke="none"></path>
+          <path d="M12 3a9 9 0 0 1 0 18V3z" fill="currentColor"></path>
         </svg>
         <span class="label">Light Mode</span>
       </button>
     </div>
+
     <p>This dashboard contains customer data. Please log in.</p>
 
     <div class="login-row">
@@ -332,80 +147,64 @@
       <div class="lock-row">
         <div class="control">
           <input id="pw" type="password" placeholder="Password" autocomplete="current-password" />
-          <button id="togglePw" class="btn-inline" type="button">Show</button>
+          <button id="togglePw" class="btn-inline">Show</button>
         </div>
         <div class="lock-actions">
           <button id="pwBtn" class="btn">Unlock</button>
         </div>
       </div>
     </div>
-    <div id="pwErr" class="err"></div>
+    <div id="pwErr" class="err" style="color:#f87171;font-size:13px;"></div>
   </div>
 </div>
 
+<!-- MAIN APP -->
 <div class="container" id="app" style="display:none;">
+
   <header class="app-header">
     <div class="brand">
-      <img id="brandLogo" src="https://theleadlasso.com/assets/dealersleads_white3.png" alt="Logo">
+      <img id="brandLogo" src="https://theleadlasso.com/agency/gvleads/GVLeads_White.png">
       <div class="title">
         <h1>DealerLeads Dashboard</h1>
         <p class="sub">(Beta) Drive your leads. Fuel your sales.</p>
       </div>
     </div>
+
     <div class="brand-controls">
       <div id="msDealer" class="ms ms-compact"></div>
     </div>
+
     <div class="header-actions">
       <button id="refreshBtn" class="btn">Refresh</button>
       <button id="resetBtn" class="btn btn-secondary">Reset all filters</button>
 
-      <!-- Export dropdown (with icons) -->
       <div class="dropdown" id="exportDropdown">
-        <button class="btn dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
-          Export ▾
-        </button>
-        <div class="dropdown-menu" role="menu" aria-label="Export options">
-          <button class="dropdown-item" id="exportCsvAction" role="menuitem">
-            <!-- CSV icon -->
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <path d="M14 2v6h6"/>
-              <path d="M8 13h8M8 17h8M8 9h3"/>
-            </svg>
-            Export CSV
-          </button>
-          <button class="dropdown-item" id="exportPdfAction" role="menuitem">
-            <!-- PDF icon -->
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <path d="M14 2v6h6"/>
-              <path d="M9 13h3v6M9 16h2M15 13h2a2 2 0 0 1 0 4h-2v-4z"/>
-            </svg>
-            Export PDF
-          </button>
+        <button class="btn dropdown-toggle">Export ▾</button>
+        <div class="dropdown-menu">
+          <button class="dropdown-item" id="exportCsvAction">Export CSV</button>
+          <button class="dropdown-item" id="exportPdfAction">Export PDF</button>
         </div>
       </div>
 
-      <!-- Video Library: same shape, red pill -->
-      <a class="btn-danger" href="https://video.dealerleads.clientsuccess.app" target="_blank" rel="noopener">Video Library</a>
+      <a class="btn-danger" href="https://dealerleads-video.vercel.app/" target="_blank">Video Library</a>
 
-      <button id="themeToggle" class="theme-toggle" type="button" title="Toggle Light/Dark Theme">
-        <svg class="icon-contrast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button id="themeToggle" class="theme-toggle">
+        <svg class="icon-contrast" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="9"></circle>
-          <path d="M12 3a9 9 0 0 1 0 18V3z" fill="currentColor" stroke="none"></path>
+          <path d="M12 3a9 9 0 0 1 0 18V3z" fill="currentColor"></path>
         </svg>
         <span class="label">Light Mode</span>
       </button>
     </div>
   </header>
 
-  <!-- Collapsible Filters -->
+  <!-- FILTER WRAPPER -->
   <div class="filters-wrap">
     <div class="filters-toggle">
       <strong style="display:flex;align-items:center;gap:8px;">
-        Filters
-        <span id="filtersCount" class="filters-badge">0</span>
+        Filters <span id="filtersCount" class="filters-badge">0</span>
       </strong>
+
       <div style="display:flex;gap:8px;align-items:center;">
         <div class="quick-row" id="quickRowTop" style="margin:0;">
           <button id="btnLastMonth" class="btn-ghost btn-sm">Last Month</button>
@@ -415,10 +214,13 @@
             <input type="date" id="fDateToTop" />
           </div>
         </div>
-        <button id="filtersToggleBtn" class="btn-ghost btn-sm" type="button">Show</button>
+
+        <button id="filtersToggleBtn" class="btn-ghost btn-sm">Show</button>
       </div>
     </div>
+
     <section class="filters" id="filters">
+
       <div class="quick-row">
         <button id="btnLastMonth2" class="btn-ghost btn-sm">Last Month</button>
         <button id="btnMTD2" class="btn-ghost btn-sm">Month To Date</button>
@@ -434,25 +236,32 @@
         <div class="field"><label>CTA Type</label><div id="msCta" class="ms"></div></div>
         <div class="field"><label>Device</label><div id="msDevice" class="ms"></div></div>
         <div class="field"><label>Offer</label><div id="msOffer" class="ms"></div></div>
+        <div class="field"><label>Age of Inventory</label><div id="msAge" class="ms"></div></div>
+        <div class="field"><label>Test Drive</label><div id="msTestDrive" class="ms"></div></div>
         <div class="field"><label>Vehicle Year</label><div id="msYear" class="ms"></div></div>
         <div class="field"><label>Vehicle Make</label><div id="msMake" class="ms"></div></div>
         <div class="field"><label>Vehicle Model</label><div id="msModel" class="ms"></div></div>
         <div class="field"><label>Lead Source</label><div id="msSource" class="ms"></div></div>
       </div>
+
     </section>
   </div>
 
+  <!-- KPIs -->
   <section class="kpis">
     <div class="kpi"><div class="kpi-label">Total Leads</div><div id="kpiTotal" class="kpi-value">0</div></div>
-    <div class="kpi"><div class="kpi-label">Unique Leads (by Email)</div><div id="kpiUniqueEmails" class="kpi-value">0</div></div>
-    <div class="kpi"><div class="kpi-label">Unique Dealerships</div><div id="kpiStores" class="kpi-value">0</div></div>
+    <div class="kpi"><div class="kpi-label">Unique Leads</div><div id="kpiUniqueEmails" class="kpi-value">0</div></div>
+    <div class="kpi"><div class="kpi-label">Dealerships</div><div id="kpiStores" class="kpi-value">0</div></div>
     <div class="kpi"><div class="kpi-label">Sales / Service</div><div id="kpiSalesService" class="kpi-value">0 / 0</div></div>
     <div class="kpi"><div class="kpi-label">Desktop / Mobile</div><div id="kpiDevice" class="kpi-value">0 / 0</div></div>
+    <div class="kpi"><div class="kpi-label">Avg Age Inv</div><div id="kpiAgeInv" class="kpi-value">0</div></div>
+    <div class="kpi"><div class="kpi-label">Test Drives</div><div id="kpiTestDrive" class="kpi-value">0</div></div>
   </section>
 
+  <!-- Offers -->
   <div class="grid-two">
     <div class="card">
-      <h3>Offers (scoped to selected dealership)</h3>
+      <h3>Offers (Scoped)</h3>
       <div id="offersChips" class="offers-chips"></div>
       <div class="offers-actions">
         <button id="offersToggle" class="btn-ghost">Show more</button>
@@ -460,44 +269,46 @@
       </div>
     </div>
 
-    <!-- ZIP Map / Boxes switch -->
+    <!-- ZIP -->
     <div class="card">
       <h3>ZIP Heat <span id="zipViewLabel">Map</span></h3>
       <div class="zip-controls">
         <button id="zipViewMap" class="btn-ghost btn-sm">Map</button>
         <button id="zipViewBoxes" class="btn-ghost btn-sm">Boxes</button>
         <button id="zipToggle" class="btn-ghost btn-sm" style="display:none;">Show more</button>
-        <button id="zipClearCache" class="btn-ghost btn-sm" title="Forget saved ZIP geocodes">Clear ZIP cache</button>
+        <button id="zipClearCache" class="btn-ghost btn-sm">Clear ZIP cache</button>
       </div>
+
       <div id="zipMapInline"></div>
       <div id="zipHeatGrid" class="zip-heat-grid" style="display:none;"></div>
     </div>
   </div>
 
+  <!-- CHARTS -->
   <section class="chart-wrap">
     <h3>Leads by Weekday</h3>
-    <div class="chart-row">
-      <canvas id="chartByDay"></canvas>
-    </div>
+    <div class="chart-row"><canvas id="chartByDay"></canvas></div>
   </section>
 
   <section class="chart-wrap">
-    <h3>Vehicle Insights — Top Models (Top 10)</h3>
-    <div class="chart-row-3">
-      <canvas id="chartTopModels"></canvas>
-    </div>
+    <h3>Top Models (Top 10)</h3>
+    <div class="chart-row-3"><canvas id="chartTopModels"></canvas></div>
   </section>
 
-  <!-- Print-only containers -->
-  <section id="printSummary" class="print-summary" aria-hidden="true"></section>
-  <section id="printTable" class="print-summary" aria-hidden="true"></section>
+  <section class="chart-wrap">
+    <h3>CTA Type Breakdown</h3>
+    <div class="chart-row"><canvas id="chartCtaType"></canvas></div>
+  </section>
 
+  <!-- PRINT -->
+  <section id="printSummary" class="print-summary"></section>
+  <section id="printTable" class="print-summary"></section>
+
+  <!-- TABLE -->
   <section class="table-wrap">
     <div class="table-actions">
-      <input type="text" id="search" placeholder="Search name, email, VIN, model, zip, referral…" />
-      <label style="display:flex;align-items:center;gap:8px;">
-        <input type="checkbox" id="fDedupe" /> Deduplicate by email
-      </label>
+      <input type="text" id="search" placeholder="Search…">
+      <label><input type="checkbox" id="fDedupe" /> Deduplicate</label>
     </div>
     <div class="table-scroll">
       <table id="dataTable"><thead></thead><tbody></tbody></table>
@@ -514,7 +325,7 @@
 const CONFIG = {
   CSV_URL: "/api/leads",
   USERNAME: "admin",
-  PASSWORD: "GL2025",
+  PASSWORD: "GV2025",
   ZIP_COORDS: { /* optional zip-> [lat,lng] */ },
   ZIP_COORDS_URL: ""
 };
@@ -524,7 +335,7 @@ function getTheme(){ return localStorage.getItem('gv_theme') || 'dark'; }
 function setTheme(t){
   document.documentElement.setAttribute('data-theme', t);
   localStorage.setItem('gv_theme', t);
-  const darkLogo = "https://theleadlasso.com/assets/dealersleads_white3.png";
+  const darkLogo = "https://theleadlasso.com/assets/whitedealerleads.png";
   const lightLogo = "https://theleadlasso.com/assets/DealerLeadsColor.png";
   document.getElementById('brandLogo').src = (t==='light') ? lightLogo : darkLogo;
   document.getElementById('lockLogo').src = (t==='light') ? lightLogo : darkLogo;
@@ -587,8 +398,12 @@ const UI = {
   kpiTotal:null, kpiUniqueEmails:null, kpiStores:null, kpiSalesService:null, kpiDevice:null,
   tableHead:null, tableBody:null, offersChips:null,
   dedupe:null, offersToggle:null, offersClear:null,
-  charts:{ byDay:null, topModels:null },
-  ms:{ dealer:null, prod:null, newUsed:null, cta:null, device:null, offer:null, year:null, make:null, model:null, source:null },
+  charts:{ byDay:null, topModels:null, ctaType:null },
+  ms:{
+    dealer:null, prod:null, newUsed:null, cta:null, device:null, offer:null,
+    year:null, make:null, model:null, source:null,
+    ageOfInventory:null, testDrive:null
+  },
   /* ZIP UI */
   zipMap:null, zipHeatGrid:null, zipToggle:null, zipViewMapBtn:null, zipViewBoxesBtn:null, zipViewLabel:null, zipClearCacheBtn:null,
   /* Export dropdown */
@@ -596,7 +411,11 @@ const UI = {
 };
 const STATE = {
   all:[], filtered:[], searchText:'', zipCoords:{},
-  selections:{ dealer:[], prod:[], newUsed:[], cta:[], device:[], offer:[], year:[], make:[], model:[], source:[] },
+  selections:{
+    dealer:[], prod:[], newUsed:[], cta:[], device:[], offer:[],
+    year:[], make:[], model:[], source:[],
+    ageOfInventory:[], testDrive:[]
+  },
   offersExpanded:false,
   zipsExpanded:false,
   zipView:'map'
@@ -667,6 +486,16 @@ function initApp(){
   UI.ms.make = buildMultiSelect(document.getElementById('msMake'),'All makes', vals=>{ STATE.selections.make=vals; applyFilters(); updateFiltersCount(); });
   UI.ms.model = buildMultiSelect(document.getElementById('msModel'),'All models', vals=>{ STATE.selections.model=vals; applyFilters(); updateFiltersCount(); });
   UI.ms.source = buildMultiSelect(document.getElementById('msSource'),'All sources', vals=>{ STATE.selections.source=vals; applyFilters(); updateFiltersCount(); });
+  UI.ms.ageOfInventory = buildMultiSelect(
+    document.getElementById('msAge'),
+    'All ages',
+    vals => { STATE.selections.ageOfInventory = vals; applyFilters(); updateFiltersCount(); }
+  );
+  UI.ms.testDrive = buildMultiSelect(
+    document.getElementById('msTestDrive'),
+    'All',
+    vals => { STATE.selections.testDrive = vals; applyFilters(); updateFiltersCount(); }
+  );
 
   // Core events
   document.getElementById('refreshBtn').addEventListener('click', loadData);
@@ -781,6 +610,7 @@ function resetAll(){
   UI.ms.dealer.setSelected([]); UI.ms.prod.setSelected([]); UI.ms.newUsed.setSelected([]); UI.ms.cta.setSelected([]);
   UI.ms.device.setSelected([]); UI.ms.offer.setSelected([]); UI.ms.year.setSelected([]);
   UI.ms.make.setSelected([]); UI.ms.model.setSelected([]); UI.ms.source.setSelected([]);
+  UI.ms.ageOfInventory.setSelected([]); UI.ms.testDrive.setSelected([]);
   document.getElementById('fDateFrom').value=''; document.getElementById('fDateTo').value='';
   document.getElementById('fDateFromTop').value=''; document.getElementById('fDateToTop').value='';
   UI.search.value=''; STATE.searchText=''; UI.dedupe.checked=false;
@@ -926,6 +756,8 @@ async function loadData(){
     UI.ms.cta.setOptions(unique(STATE.all.map(r=>r.ctaType)).sort());
     UI.ms.device.setOptions(unique(STATE.all.map(r=>(r.device||'').toLowerCase())).sort());
     UI.ms.offer.setOptions(unique(STATE.all.map(r=>r.offer)).sort());
+    UI.ms.ageOfInventory.setOptions(unique(STATE.all.map(r=>r.ageOfInventory)).sort());
+    UI.ms.testDrive.setOptions(unique(STATE.all.map(r=>r.testDrive)).sort());
     UI.ms.year.setOptions(unique(STATE.all.map(r=>r.vehicleYear)).sort((a,b)=>String(a).localeCompare(String(b))));
     UI.ms.make.setOptions(unique(STATE.all.map(r=>r.vehicleMake)).sort());
     UI.ms.model.setOptions(unique(STATE.all.map(r=>r.vehicleModel)).sort());
@@ -987,6 +819,8 @@ function rowsToObjects(headersRaw, rows){
     device:findHeader(headers,['Desktop/Mobile','Device']),
     offer:findHeader(headers,['Offer','Promotion','Incentive']),
     priceRange:findHeader(headers,['Price Range']),
+    ageOfInventory:findHeader(headers,['Age of Inventory','Avg Inventory Age','Average Age of Inventory','Inventory Age']),
+    testDrive:findHeader(headers,['Test Drive','Booked Test Drive','TestDrive']),
     productType:findHeader(headers,['Product Type','Product','ProductType','Type']),
     referral:findHeader(headers,['Lead Source','Referral','Source','Campaign'],21)
   };
@@ -1017,6 +851,8 @@ function rowsToObjects(headersRaw, rows){
       device:(pick(r,H.device)||'').toLowerCase(),
       offer:pick(r,H.offer),
       priceRange:pick(r,H.priceRange),
+      ageOfInventory:pick(r,H.ageOfInventory),
+      testDrive:pick(r,H.testDrive),
       productType:pick(r,H.productType),
       referral:pick(r,H.referral)
     };
@@ -1047,6 +883,8 @@ function refreshOptionsScoped(){
   UI.ms.cta.setOptions(unique(base.map(function(r){return r.ctaType;})).sort());
   UI.ms.device.setOptions(unique(base.map(function(r){return (r.device||'').toLowerCase();})).sort());
   UI.ms.offer.setOptions(unique(base.map(function(r){return r.offer;})).sort());
+  UI.ms.ageOfInventory.setOptions(unique(base.map(function(r){return r.ageOfInventory;})).sort());
+  UI.ms.testDrive.setOptions(unique(base.map(function(r){return r.testDrive;})).sort());
   UI.ms.year.setOptions(unique(base.map(function(r){return r.vehicleYear;})).sort(function(a,b){return String(a).localeCompare(String(b));}));
   UI.ms.make.setOptions(unique(base.map(function(r){return r.vehicleMake;})).sort());
   UI.ms.model.setOptions(unique(base.map(function(r){return r.vehicleModel;})).sort());
@@ -1057,6 +895,8 @@ function refreshOptionsScoped(){
   UI.ms.cta.setSelected(STATE.selections.cta.filter(function(v){return base.some(function(r){return r.ctaType===v;});}));
   UI.ms.device.setSelected(STATE.selections.device.filter(function(v){return base.some(function(r){return (r.device||'').toLowerCase()===v;});}));
   UI.ms.offer.setSelected(STATE.selections.offer.filter(function(v){return base.some(function(r){return r.offer===v;});}));
+  UI.ms.ageOfInventory.setSelected(STATE.selections.ageOfInventory.filter(function(v){return base.some(function(r){return r.ageOfInventory===v;});}));
+  UI.ms.testDrive.setSelected(STATE.selections.testDrive.filter(function(v){return base.some(function(r){return r.testDrive===v;});}));
   UI.ms.year.setSelected(STATE.selections.year.filter(function(v){return base.some(function(r){return r.vehicleYear===v;});}));
   UI.ms.make.setSelected(STATE.selections.make.filter(function(v){return base.some(function(r){return r.vehicleMake===v;});}));
   UI.ms.model.setSelected(STATE.selections.model.filter(function(v){return base.some(function(r){return r.vehicleModel===v;});}));
@@ -1073,6 +913,8 @@ function updateFiltersCount(){
     total += UI.ms.cta?.getSelected().length || 0;
     total += UI.ms.device?.getSelected().length || 0;
     total += UI.ms.offer?.getSelected().length || 0;
+    total += UI.ms.ageOfInventory?.getSelected().length || 0;
+    total += UI.ms.testDrive?.getSelected().length || 0;
     total += UI.ms.year?.getSelected().length || 0;
     total += UI.ms.make?.getSelected().length || 0;
     total += UI.ms.model?.getSelected().length || 0;
@@ -1089,9 +931,17 @@ function updateFiltersCount(){
 /* ============================== FILTER + RENDER ============================== */
 function applyFilters(){
   var q={
-    dealer:STATE.selections.dealer, prod:STATE.selections.prod, newUsed:STATE.selections.newUsed, cta:STATE.selections.cta,
-    device:STATE.selections.device, offer:STATE.selections.offer,
-    year:STATE.selections.year, make:STATE.selections.make, model:STATE.selections.model,
+    dealer:STATE.selections.dealer,
+    prod:STATE.selections.prod,
+    newUsed:STATE.selections.newUsed,
+    cta:STATE.selections.cta,
+    device:STATE.selections.device,
+    offer:STATE.selections.offer,
+    ageOfInventory:STATE.selections.ageOfInventory,
+    testDrive:STATE.selections.testDrive,
+    year:STATE.selections.year,
+    make:STATE.selections.make,
+    model:STATE.selections.model,
     source:STATE.selections.source,
     dateFrom:document.getElementById('fDateFrom').value||'',
     dateTo:document.getElementById('fDateTo').value||'',
@@ -1106,6 +956,8 @@ function applyFilters(){
     if (q.cta.length && q.cta.indexOf(r.ctaType)===-1) return false;
     if (q.device.length && q.device.indexOf((r.device||'').toLowerCase())===-1) return false;
     if (q.offer.length && q.offer.indexOf(r.offer)===-1) return false;
+    if (q.ageOfInventory.length && q.ageOfInventory.indexOf(r.ageOfInventory)===-1) return false;
+    if (q.testDrive.length && q.testDrive.indexOf(r.testDrive)===-1) return false;
     if (q.year.length && q.year.indexOf(r.vehicleYear)===-1) return false;
     if (q.make.length && q.make.indexOf(r.vehicleMake)===-1) return false;
     if (q.model.length && q.model.indexOf(r.vehicleModel)===-1) return false;
@@ -1113,7 +965,12 @@ function applyFilters(){
     if (q.dateFrom && r.dateISO && r.dateISO < q.dateFrom) return false;
     if (q.dateTo && r.dateISO && r.dateISO > q.dateTo) return false;
     if (s){
-      var hay=[r.fullName,r.firstName,r.lastName,r.email,r.phone,r.vehicleMake,r.vehicleModel,r.vehicleTrim,r.stkVin,r.zip,r.offer,r.referral,r.urlDomain,r.dealerName,r.ctaType,(r.device||''),r.productType].join(' ').toLowerCase();
+      var hay=[
+        r.fullName,r.firstName,r.lastName,r.email,r.phone,
+        r.vehicleMake,r.vehicleModel,r.vehicleTrim,r.stkVin,
+        r.zip,r.offer,r.referral,r.urlDomain,r.dealerName,
+        r.ctaType,(r.device||''),r.productType,r.ageOfInventory,r.testDrive
+      ].join(' ').toLowerCase();
       if (hay.indexOf(s)===-1) return false;
     }
     return true;
@@ -1179,8 +1036,42 @@ function renderTable(rows){
   const head=document.querySelector('#dataTable thead');
   const body=document.querySelector('#dataTable tbody');
   if (!rows.length){ head.innerHTML='<tr><th>No data</th></tr>'; body.innerHTML=''; return; }
-  var cols=['dateISO','timeRaw','dealerName','dealershipUrl','fullName','email','phone','productType','ctaType','newUsed','device','vehicleYear','vehicleMake','vehicleModel','vehicleTrim','stkVin','zip','offer','priceRange','urlDomain','pageSubmitted','referral'];
-  var labels={dateISO:'Date',timeRaw:'Time',dealerName:'Dealership',dealershipUrl:'Domain/URL',fullName:'Name',email:'Email',phone:'Phone',productType:'Product',ctaType:'CTA Type',newUsed:'New/Used',device:'Device',vehicleYear:'Year',vehicleMake:'Make',vehicleModel:'Model',vehicleTrim:'Trim',stkVin:'Stk/VIN',zip:'Zip',offer:'Offer',priceRange:'Price Range',urlDomain:'Source (Domain)',pageSubmitted:'Page URL', referral:'Lead Source'};
+
+  var cols=[
+    'dateISO','timeRaw','dealerName','dealershipUrl','fullName','email','phone',
+    'productType','ctaType','newUsed','device',
+    'vehicleYear','vehicleMake','vehicleModel','vehicleTrim',
+    'stkVin','zip','offer','priceRange',
+    'ageOfInventory','testDrive',
+    'urlDomain','pageSubmitted','referral'
+  ];
+  var labels={
+    dateISO:'Date',
+    timeRaw:'Time',
+    dealerName:'Dealership',
+    dealershipUrl:'Domain/URL',
+    fullName:'Name',
+    email:'Email',
+    phone:'Phone',
+    productType:'Product',
+    ctaType:'CTA Type',
+    newUsed:'New/Used',
+    device:'Device',
+    vehicleYear:'Year',
+    vehicleMake:'Make',
+    vehicleModel:'Model',
+    vehicleTrim:'Trim',
+    stkVin:'Stk/VIN',
+    zip:'Zip',
+    offer:'Offer',
+    priceRange:'Price Range',
+    ageOfInventory:'Age of Inventory',
+    testDrive:'Test Drive',
+    urlDomain:'Source (Domain)',
+    pageSubmitted:'Page URL',
+    referral:'Lead Source'
+  };
+
   head.innerHTML='<tr>'+cols.map(function(c){return '<th>'+(labels[c]||c)+'</th>';}).join('')+'</tr>';
   body.innerHTML = rows.map(function(r){
     return '<tr>'+cols.map(function(c){return cellHtml(c,r[c],r);}).join('')+'</tr>';
@@ -1196,26 +1087,71 @@ function cellHtml(key,val,row){
 }
 function renderKpis(rows){
   document.getElementById('kpiTotal').textContent=rows.length.toLocaleString();
-  document.getElementById('kpiUniqueEmails').textContent=new Set(rows.map(function(r){return r.email;}).filter(Boolean)).size.toLocaleString();
-  var stores={}; var sales=0,service=0,desktop=0,mobile=0;
-  rows.forEach(function(r){ if (r.dealerName) stores[r.dealerName]=1; var p=(r.productType||'').toLowerCase(); if(p==='sales') sales++; if(p==='service') service++; var d=(r.device||'').toLowerCase(); if(d==='desktop') desktop++; if(d==='mobile') mobile++; });
+  document.getElementById('kpiUniqueEmails').textContent=
+    new Set(rows.map(function(r){return r.email;}).filter(Boolean)).size.toLocaleString();
+
+  var stores={};
+  var sales=0,service=0,desktop=0,mobile=0;
+  var ageSum=0, ageCount=0, testDriveCount=0;
+
+  rows.forEach(function(r){
+    if (r.dealerName) stores[r.dealerName]=1;
+
+    var p=(r.productType||'').toLowerCase();
+    if(p==='sales')  sales++;
+    if(p==='service') service++;
+
+    var d=(r.device||'').toLowerCase();
+    if(d==='desktop') desktop++;
+    if(d==='mobile')  mobile++;
+
+    if (r.ageOfInventory){
+      var n=parseFloat(r.ageOfInventory);
+      if (!isNaN(n)){ ageSum+=n; ageCount++; }
+    }
+
+    var td=(r.testDrive||'').toString().toLowerCase();
+    if (td==='yes' || td==='1' || td==='true') testDriveCount++;
+  });
+
   document.getElementById('kpiStores').textContent=Object.keys(stores).length.toLocaleString();
   document.getElementById('kpiSalesService').textContent=sales+' / '+service;
   document.getElementById('kpiDevice').textContent=desktop+' / '+mobile;
+
+  var avgAge = ageCount ? Math.round(ageSum/ageCount) : 0;
+  var ageEl = document.getElementById('kpiAgeInv');
+  if (ageEl) ageEl.textContent = avgAge.toLocaleString();
+
+  var tdEl = document.getElementById('kpiTestDrive');
+  if (tdEl) tdEl.textContent = testDriveCount.toLocaleString();
 }
 function renderCharts(rows){
   var weekdays=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var byDay=[0,0,0,0,0,0,0];
-  rows.forEach(function(r){ if (r.timestamp){ byDay[new Date(r.timestamp).getDay()]++; }});
+  rows.forEach(function(r){
+    if (r.timestamp){
+      byDay[new Date(r.timestamp).getDay()]++;
+    }
+  });
   drawBar('chartByDay','Leads by Weekday',weekdays,byDay,'byDay');
 
   var byModel=countBy(rows.map(function(r){return r.vehicleModel;}));
-  var modelEntries=Object.keys(byModel).filter(function(k){return k;}).map(function(k){return [k,byModel[k]];});
+  var modelEntries=Object.keys(byModel).filter(function(k){return k;})
+    .map(function(k){return [k,byModel[k]];});
   modelEntries.sort(function(a,b){return b[1]-a[1];});
   var modelTop=modelEntries.slice(0,10);
   var labels=modelTop.map(function(m){return m[0]+' ('+m[1]+')';});
   var data=modelTop.map(function(m){return m[1];});
   drawBar('chartTopModels','Top Models (Top 10)', labels, data, 'topModels');
+
+  // CTA Type Breakdown
+  var byCTA=countBy(rows.map(function(r){return r.ctaType;}));
+  var ctaEntries=Object.keys(byCTA).filter(function(k){return k;})
+    .map(function(k){return [k,byCTA[k]];});
+  ctaEntries.sort(function(a,b){return b[1]-a[1];});
+  var ctaLabels=ctaEntries.map(function(e){return e[0]+' ('+e[1]+')';});
+  var ctaData=ctaEntries.map(function(e){return e[1];});
+  drawBar('chartCtaType','CTA Type Breakdown',ctaLabels,ctaData,'ctaType');
 }
 function drawBar(canvasId,title,labels,data,key){
   var ctx=document.getElementById(canvasId).getContext('2d');
@@ -1391,18 +1327,31 @@ function buildPrintSummary(rows){
   var uniqueEmails = new Set(rows.map(function(r){return r.email;}).filter(Boolean)).size;
   var stores = new Set(rows.map(function(r){return r.dealerName;}).filter(Boolean)).size;
   var sales=0, service=0, desktop=0, mobile=0;
+  var ageSum=0, ageCount=0, testDriveCount=0;
+
   rows.forEach(function(r){
     var p=(r.productType||'').toLowerCase();
-    if(p==='sales') sales++;
+    if(p==='sales')  sales++;
     if(p==='service') service++;
+
     var d=(r.device||'').toLowerCase();
     if(d==='desktop') desktop++;
-    if(d==='mobile') mobile++;
+    if(d==='mobile')  mobile++;
+
+    if (r.ageOfInventory){
+      var n=parseFloat(r.ageOfInventory);
+      if (!isNaN(n)){ ageSum+=n; ageCount++; }
+    }
+
+    var td=(r.testDrive||'').toString().toLowerCase();
+    if (td==='yes' || td==='1' || td==='true') testDriveCount++;
   });
 
   var weekdays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var byDay=[0,0,0,0,0,0,0];
   rows.forEach(function(r){ if (r.timestamp){ byDay[new Date(r.timestamp).getDay()]++; }});
+
+  var avgAge = ageCount ? Math.round(ageSum/ageCount) : 0;
 
   container.innerHTML = '\
     <h1 style="margin:0 0 8px 0;">DealerLeads — Summary</h1>\
@@ -1419,6 +1368,8 @@ function buildPrintSummary(rows){
         <li>Unique Dealerships (in results): <strong>'+stores.toLocaleString()+'</strong></li>\
         <li>Sales / Service: <strong>'+sales+'</strong> / <strong>'+service+'</strong></li>\
         <li>Desktop / Mobile: <strong>'+desktop+'</strong> / <strong>'+mobile+'</strong></li>\
+        <li>Avg Age of Inventory: <strong>'+avgAge.toLocaleString()+'</strong></li>\
+        <li>Test Drive Leads: <strong>'+testDriveCount.toLocaleString()+'</strong></li>\
       </ul>\
     </section>\
     <section style="margin:0 0 12px 0; padding:10px; border:1px solid #ddd; border-radius:8px;">\
@@ -1435,7 +1386,6 @@ function buildPrintSummary(rows){
 /* ============================== HELPERS ============================== */
 function escapeHtml(str){ return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;'); }
 function csvCell(v){ if (v==null) return ''; var s=String(v); if (s.indexOf('"')>-1||s.indexOf(',')>-1||s.indexOf('\n')>-1) s='"'+s.replace(/"/g,'""')+'"'; return s; }
-function pick(arr,i){ return (i>=0&&i<arr.length) ? (arr[i]==null?'':String(arr[i])) : ''; }
 function toIsoDateTime(dateStr,timeStr){ if(!dateStr) return ''; try{ var clean=String(dateStr).replace(/^[A-Za-z]+,\s*/,''); var d=new Date(clean + (timeStr?(' '+timeStr):'')); if(isNaN(d.getTime())) return ''; function pad(n){return String(n).padStart(2,'0');} return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }catch(e){ return ''; } }
 function normalizePhone(p){ var d=(p||'').replace(/\D+/g,''); if(!d) return ''; return (d.length===11 && d.indexOf('1')===0)?d.slice(1):d; }
 </script>
