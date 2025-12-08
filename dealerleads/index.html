@@ -1,14 +1,13 @@
 
 <!DOCTYPE html>
-
-<html data-theme="dark" lang="en">
+<html lang="en" data-theme="dark">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>DealerLeads Dashboard (beta)</title>
-<link href="https://cdn.jsdelivr.net" rel="preconnect"/>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 <style>
@@ -307,204 +306,216 @@
 </style>
 </head>
 <body>
+
 <!-- Login -->
-<div class="lock-overlay" id="lock" style="display:flex;">
-<div class="lock-card">
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;justify-content:space-between;">
-<div style="display:flex;align-items:center;gap:10px;">
-<img alt="Logo" id="lockLogo" src="https://theleadlasso.com/agency/gvleads/GVLeads_White.png" style="height:36px;width:auto;"/>
-<h2 style="margin:0;">Enter Dashboard Access (beta) </h2>
+<div id="lock" class="lock-overlay" style="display:flex;">
+  <div class="lock-card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img id="lockLogo" src="https://theleadlasso.com/agency/gvleads/GVLeads_White.png" alt="Logo" style="height:36px;width:auto;">
+        <h2 style="margin:0;">Enter Dashboard Access (beta) </h2>
+      </div>
+      <button id="lockTheme" class="theme-toggle" type="button" title="Toggle Light/Dark Theme">
+        <svg class="icon-contrast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 3a9 9 0 0 1 0 18V3z" fill="currentColor" stroke="none"></path>
+        </svg>
+        <span class="label">Light Mode</span>
+      </button>
+    </div>
+    <p>This dashboard contains customer data. Please log in.</p>
+
+    <div class="login-row">
+      <div class="control">
+        <input id="user" type="text" placeholder="Username" autocomplete="username" />
+      </div>
+
+      <div class="lock-row">
+        <div class="control">
+          <input id="pw" type="password" placeholder="Password" autocomplete="current-password" />
+          <button id="togglePw" class="btn-inline" type="button">Show</button>
+        </div>
+        <div class="lock-actions">
+          <button id="pwBtn" class="btn">Unlock</button>
+        </div>
+      </div>
+    </div>
+    <div id="pwErr" class="err"></div>
+  </div>
 </div>
-<button class="theme-toggle" id="lockTheme" title="Toggle Light/Dark Theme" type="button">
-<svg class="icon-contrast" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
-<circle cx="12" cy="12" r="9"></circle>
-<path d="M12 3a9 9 0 0 1 0 18V3z" fill="currentColor" stroke="none"></path>
-</svg>
-<span class="label">Light Mode</span>
-</button>
-</div>
-<p>This dashboard contains customer data. Please log in.</p>
-<div class="login-row">
-<div class="control">
-<input autocomplete="username" id="user" placeholder="Username" type="text"/>
-</div>
-<div class="lock-row">
-<div class="control">
-<input autocomplete="current-password" id="pw" placeholder="Password" type="password"/>
-<button class="btn-inline" id="togglePw" type="button">Show</button>
-</div>
-<div class="lock-actions">
-<button class="btn" id="pwBtn">Unlock</button>
-</div>
-</div>
-</div>
-<div class="err" id="pwErr"></div>
-</div>
-</div>
+
 <div class="container" id="app" style="display:none;">
-<header class="app-header">
-<div class="brand">
-<img alt="Logo" id="brandLogo" src="https://theleadlasso.com/agency/gvleads/GVLeads_White.png"/>
-<div class="title">
-<h1>DealerLeads Dashboard</h1>
-<p class="sub">(Beta) Drive your leads. Fuel your sales.</p>
-</div>
-</div>
-<div class="brand-controls">
-<div class="ms ms-compact" id="msDealer"></div>
-</div>
-<div class="header-actions">
-<button class="btn" id="refreshBtn">Refresh</button>
-<button class="btn btn-secondary" id="resetBtn">Reset all filters</button>
-<!-- Export dropdown (with icons) -->
-<div class="dropdown" id="exportDropdown">
-<button aria-expanded="false" aria-haspopup="true" class="btn dropdown-toggle" type="button">
+  <header class="app-header">
+    <div class="brand">
+      <img id="brandLogo" src="https://theleadlasso.com/agency/gvleads/GVLeads_White.png" alt="Logo">
+      <div class="title">
+        <h1>DealerLeads Dashboard</h1>
+        <p class="sub">(Beta) Drive your leads. Fuel your sales.</p>
+      </div>
+    </div>
+    <div class="brand-controls">
+      <div id="msDealer" class="ms ms-compact"></div>
+    </div>
+    <div class="header-actions">
+      <button id="refreshBtn" class="btn">Refresh</button>
+      <button id="resetBtn" class="btn btn-secondary">Reset all filters</button>
+
+      <!-- Export dropdown (with icons) -->
+      <div class="dropdown" id="exportDropdown">
+        <button class="btn dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false">
           Export ▾
         </button>
-<div aria-label="Export options" class="dropdown-menu" role="menu">
-<button class="dropdown-item" id="exportCsvAction" role="menuitem">
-<!-- CSV icon -->
-<svg fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
-<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-<path d="M14 2v6h6"></path>
-<path d="M8 13h8M8 17h8M8 9h3"></path>
-</svg>
+        <div class="dropdown-menu" role="menu" aria-label="Export options">
+          <button class="dropdown-item" id="exportCsvAction" role="menuitem">
+            <!-- CSV icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <path d="M14 2v6h6"/>
+              <path d="M8 13h8M8 17h8M8 9h3"/>
+            </svg>
             Export CSV
           </button>
-<button class="dropdown-item" id="exportPdfAction" role="menuitem">
-<!-- PDF icon -->
-<svg fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
-<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-<path d="M14 2v6h6"></path>
-<path d="M9 13h3v6M9 16h2M15 13h2a2 2 0 0 1 0 4h-2v-4z"></path>
-</svg>
+          <button class="dropdown-item" id="exportPdfAction" role="menuitem">
+            <!-- PDF icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <path d="M14 2v6h6"/>
+              <path d="M9 13h3v6M9 16h2M15 13h2a2 2 0 0 1 0 4h-2v-4z"/>
+            </svg>
             Export PDF
           </button>
-</div>
-</div>
-<!-- Video Library: same shape, red pill -->
-<a class="btn-danger" href="https://dealerleads-video.vercel.app/" rel="noopener" target="_blank">Video Library</a>
-<button class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Theme" type="button">
-<svg class="icon-contrast" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
-<circle cx="12" cy="12" r="9"></circle>
-<path d="M12 3a9 9 0 0 1 0 18V3z" fill="currentColor" stroke="none"></path>
-</svg>
-<span class="label">Light Mode</span>
-</button>
-</div>
-</header>
-<!-- Collapsible Filters -->
-<div class="filters-wrap">
-<div class="filters-toggle">
-<strong style="display:flex;align-items:center;gap:8px;">
-        Filters
-        <span class="filters-badge" id="filtersCount">0</span>
-</strong>
-<div style="display:flex;gap:8px;align-items:center;">
-<div class="quick-row" id="quickRowTop" style="margin:0;">
-<button class="btn-ghost btn-sm" id="btnLastMonth">Last Month</button>
-<button class="btn-ghost btn-sm" id="btnMTD">Month To Date</button>
-<div class="date-inline">
-<input id="fDateFromTop" type="date"/>
-<input id="fDateToTop" type="date"/>
-</div>
-</div>
-<button class="btn-ghost btn-sm" id="filtersToggleBtn" type="button">Show</button>
-</div>
-</div>
-<section class="filters" id="filters">
-<div class="quick-row">
-<button class="btn-ghost btn-sm" id="btnLastMonth2">Last Month</button>
-<button class="btn-ghost btn-sm" id="btnMTD2">Month To Date</button>
-<div class="date-inline">
-<input id="fDateFrom" type="date"/>
-<input id="fDateTo" type="date"/>
-</div>
-</div>
-<div class="filter-row">
-<div class="field"><label>Product Type</label><div class="ms" id="msProd"></div></div>
-<div class="field"><label>New/Used</label><div class="ms" id="msNewUsed"></div></div>
-<div class="field"><label>CTA Type</label><div class="ms" id="msCta"></div></div>
-<div class="field"><label>Device</label><div class="ms" id="msDevice"></div></div>
-<div class="field"><label>Offer</label><div class="ms" id="msOffer"></div></div>
-<div class="field"><label>Vehicle Year</label><div class="ms" id="msYear"></div></div>
-<div class="field"><label>Vehicle Make</label><div class="ms" id="msMake"></div></div>
-<div class="field"><label>Vehicle Model</label><div class="ms" id="msModel"></div></div>
-<div class="field"><label>Lead Source</label><div class="ms" id="msSource"></div></div>
+        </div>
+      </div>
 
-<div class="field"><label>Age of Inventory</label><div class="ms" id="msAge"></div></div>
-<div class="field"><label>Test Drive</label><div class="ms" id="msTestDrive"></div></div>
-</div>
-</section>
-</div>
-<section class="kpis">
-<div class="kpi"><div class="kpi-label">Total Leads</div><div class="kpi-value" id="kpiTotal">0</div></div>
-<div class="kpi"><div class="kpi-label">Unique Leads (by Email)</div><div class="kpi-value" id="kpiUniqueEmails">0</div></div>
-<div class="kpi"><div class="kpi-label">Unique Dealerships</div><div class="kpi-value" id="kpiStores">0</div></div>
-<div class="kpi"><div class="kpi-label">Sales / Service</div><div class="kpi-value" id="kpiSalesService">0 / 0</div></div>
-<div class="kpi"><div class="kpi-label">Desktop / Mobile</div><div class="kpi-value" id="kpiDevice">0 / 0</div></div>
-<div class="kpi"><div class="kpi-label">Avg Age of Inventory</div><div class="kpi-value" id="kpiAgeInv">0</div></div><div class="kpi"><div class="kpi-label">Test Drives</div><div class="kpi-value" id="kpiTestDrive">0</div></div></section>
-<div class="grid-two">
-<div class="card">
-<h3>Offers (scoped to selected dealership)</h3>
-<div class="offers-chips" id="offersChips"></div>
-<div class="offers-actions">
-<button class="btn-ghost" id="offersToggle">Show more</button>
-<button class="btn-ghost" id="offersClear">Clear</button>
-</div>
-</div>
-<!-- ZIP Map / Boxes switch -->
-<div class="card">
-<h3>ZIP Heat <span id="zipViewLabel">Map</span></h3>
-<div class="zip-controls">
-<button class="btn-ghost btn-sm" id="zipViewMap">Map</button>
-<button class="btn-ghost btn-sm" id="zipViewBoxes">Boxes</button>
-<button class="btn-ghost btn-sm" id="zipToggle" style="display:none;">Show more</button>
-<button class="btn-ghost btn-sm" id="zipClearCache" title="Forget saved ZIP geocodes">Clear ZIP cache</button>
-</div>
-<div id="zipMapInline"></div>
-<div class="zip-heat-grid" id="zipHeatGrid" style="display:none;"></div>
-</div>
-</div>
-<section class="chart-wrap">
-<h3>Leads by Weekday</h3>
-<div class="chart-row">
-<canvas id="chartByDay"></canvas>
-</div>
-</section>
-<section class="chart-wrap">
-<h3>Vehicle Insights — Top Models (Top 10)</h3>
-<div class="chart-row-3">
-<canvas id="chartTopModels"></canvas>
-</div>
-</section>
-<!-- Print-only containers -->
-<section aria-hidden="true" class="print-summary" id="printSummary"></section>
-<section aria-hidden="true" class="print-summary" id="printTable"></section>
-<section class="table-wrap">
-<div class="table-actions">
-<input id="search" placeholder="Search name, email, VIN, model, zip, referral…" type="text"/>
-<label style="display:flex;align-items:center;gap:8px;">
-<input id="fDedupe" type="checkbox"/> Deduplicate by email
+      <!-- Video Library: same shape, red pill -->
+      <a class="btn-danger" href="https://dealerleads-video.vercel.app/" target="_blank" rel="noopener">Video Library</a>
+
+      <button id="themeToggle" class="theme-toggle" type="button" title="Toggle Light/Dark Theme">
+        <svg class="icon-contrast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 3a9 9 0 0 1 0 18V3z" fill="currentColor" stroke="none"></path>
+        </svg>
+        <span class="label">Light Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Collapsible Filters -->
+  <div class="filters-wrap">
+    <div class="filters-toggle">
+      <strong style="display:flex;align-items:center;gap:8px;">
+        Filters
+        <span id="filtersCount" class="filters-badge">0</span>
+      </strong>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="quick-row" id="quickRowTop" style="margin:0;">
+          <button id="btnLastMonth" class="btn-ghost btn-sm">Last Month</button>
+          <button id="btnMTD" class="btn-ghost btn-sm">Month To Date</button>
+          <div class="date-inline">
+            <input type="date" id="fDateFromTop" />
+            <input type="date" id="fDateToTop" />
+          </div>
+        </div>
+        <button id="filtersToggleBtn" class="btn-ghost btn-sm" type="button">Show</button>
+      </div>
+    </div>
+    <section class="filters" id="filters">
+      <div class="quick-row">
+        <button id="btnLastMonth2" class="btn-ghost btn-sm">Last Month</button>
+        <button id="btnMTD2" class="btn-ghost btn-sm">Month To Date</button>
+        <div class="date-inline">
+          <input type="date" id="fDateFrom" />
+          <input type="date" id="fDateTo" />
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <div class="field"><label>Product Type</label><div id="msProd" class="ms"></div></div>
+        <div class="field"><label>New/Used</label><div id="msNewUsed" class="ms"></div></div>
+        <div class="field"><label>CTA Type</label><div id="msCta" class="ms"></div></div>
+        <div class="field"><label>Device</label><div id="msDevice" class="ms"></div></div>
+        <div class="field"><label>Offer</label><div id="msOffer" class="ms"></div></div>
+        <div class="field"><label>Vehicle Year</label><div id="msYear" class="ms"></div></div>
+        <div class="field"><label>Vehicle Make</label><div id="msMake" class="ms"></div></div>
+        <div class="field"><label>Vehicle Model</label><div id="msModel" class="ms"></div></div>
+        <div class="field"><label>Lead Source</label><div id="msSource" class="ms"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="kpis">
+    <div class="kpi"><div class="kpi-label">Total Leads</div><div id="kpiTotal" class="kpi-value">0</div></div>
+    <div class="kpi"><div class="kpi-label">Unique Leads (by Email)</div><div id="kpiUniqueEmails" class="kpi-value">0</div></div>
+    <div class="kpi"><div class="kpi-label">Unique Dealerships</div><div id="kpiStores" class="kpi-value">0</div></div>
+    <div class="kpi"><div class="kpi-label">Sales / Service</div><div id="kpiSalesService" class="kpi-value">0 / 0</div></div>
+    <div class="kpi"><div class="kpi-label">Desktop / Mobile</div><div id="kpiDevice" class="kpi-value">0 / 0</div></div>
+  </section>
+
+  <div class="grid-two">
+    <div class="card">
+      <h3>Offers (scoped to selected dealership)</h3>
+      <div id="offersChips" class="offers-chips"></div>
+      <div class="offers-actions">
+        <button id="offersToggle" class="btn-ghost">Show more</button>
+        <button id="offersClear" class="btn-ghost">Clear</button>
+      </div>
+    </div>
+
+    <!-- ZIP Map / Boxes switch -->
+    <div class="card">
+      <h3>ZIP Heat <span id="zipViewLabel">Map</span></h3>
+      <div class="zip-controls">
+        <button id="zipViewMap" class="btn-ghost btn-sm">Map</button>
+        <button id="zipViewBoxes" class="btn-ghost btn-sm">Boxes</button>
+        <button id="zipToggle" class="btn-ghost btn-sm" style="display:none;">Show more</button>
+        <button id="zipClearCache" class="btn-ghost btn-sm" title="Forget saved ZIP geocodes">Clear ZIP cache</button>
+      </div>
+      <div id="zipMapInline"></div>
+      <div id="zipHeatGrid" class="zip-heat-grid" style="display:none;"></div>
+    </div>
+  </div>
+
+  <section class="chart-wrap">
+    <h3>Leads by Weekday</h3>
+    <div class="chart-row">
+      <canvas id="chartByDay"></canvas>
+    </div>
+  </section>
+
+  <section class="chart-wrap">
+    <h3>Vehicle Insights — Top Models (Top 10)</h3>
+    <div class="chart-row-3">
+      <canvas id="chartTopModels"></canvas>
+    </div>
+  </section>
+
+  <!-- Print-only containers -->
+  <section id="printSummary" class="print-summary" aria-hidden="true"></section>
+  <section id="printTable" class="print-summary" aria-hidden="true"></section>
+
+  <section class="table-wrap">
+    <div class="table-actions">
+      <input type="text" id="search" placeholder="Search name, email, VIN, model, zip, referral…" />
+      <label style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="fDedupe" /> Deduplicate by email
       </label>
+    </div>
+    <div class="table-scroll">
+      <table id="dataTable"><thead></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <footer class="app-footer">
+    <span>Made with ❤️ from Texas  • Last refresh <span id="lastRefresh">—</span></span>
+  </footer>
 </div>
-<div class="table-scroll">
-<table id="dataTable"><thead></thead><tbody></tbody></table>
-</div>
-</section>
-<section class="chart-wrap">
-<h3>CTA Type Breakdown</h3>
-<div class="chart-row"><canvas id="chartCtaType"></canvas></div>
-</section><footer class="app-footer">
-<span>Made with ❤️ from Texas  • Last refresh <span id="lastRefresh">—</span></span>
-</footer>
-</div>
+
 <script>
 /* ============================== CONFIG ============================== */
 const CONFIG = {
   CSV_URL: "/api/leads",
   USERNAME: "admin",
-  PASSWORD: "GV2025",
+  PASSWORD: "GL2025",
   ZIP_COORDS: { /* optional zip-> [lat,lng] */ },
   ZIP_COORDS_URL: ""
 };
